@@ -118,7 +118,7 @@ class ClientFirework {
         this.x = newData.x * canvasWidth;
         // Apply gentle camera offset - fireworks should still visually climb
         const rawY = newData.y * canvasHeight;
-        this.y = rawY + (cameraY * canvasHeight * 0.4);
+        this.y = rawY + (cameraY * canvasHeight * 0.6);
         this.heightReached = newData.heightReached;
 
         // Check if just exploded

@@ -248,11 +248,16 @@ function updateGame() {
     // Update all fireworks
     gameState.fireworks.forEach(fw => fw.update(elapsedTime));
 
-    // Update camera to follow the pack
+    // Update camera to follow the LEADER (highest firework)
+    // This ensures the view moves up with the "final rockets"
     const active = gameState.fireworks.filter(fw => !fw.hasExploded);
     if (active.length > 0) {
-        const avgHeight = active.reduce((sum, fw) => sum + (1 - fw.y), 0) / active.length;
-        gameState.cameraY += (avgHeight - gameState.cameraY) * 0.03;
+        // Find highest firework (lowest y value)
+        const minY = Math.min(...active.map(fw => fw.y));
+        const targetHeight = 1.0 - minY;
+
+        // Smoothly follow the leader (faster lerp for responsiveness)
+        gameState.cameraY += (targetHeight - gameState.cameraY) * 0.05;
     }
 
     // Check winner conditions
