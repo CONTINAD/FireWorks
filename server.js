@@ -120,7 +120,9 @@ class ServerFirework {
         // Speed - slower for longer games (~45 sec)
         this.baseSpeed = 0.0006 + Math.random() * 0.0004;
         this.speed = this.baseSpeed;
-        this.wobble = Math.random() * Math.PI * 2;
+        // Drift - random slight angle, no wobble
+        this.drift = (Math.random() - 0.5) * 0.0005;
+        this.accel = 1.01; // Slight acceleration
 
         // Visual
         this.color = CONFIG.COLORS[Math.floor(Math.random() * CONFIG.COLORS.length)];
@@ -138,15 +140,15 @@ class ServerFirework {
     update(elapsedTime) {
         if (this.hasExploded) return;
 
-        // Move upward
+        // Move upward with slight acceleration
         this.y -= this.speed;
+        this.speed *= this.accel; // Accelerate like a rocket
 
-        // Speed variation
-        this.speed = this.baseSpeed + Math.sin(elapsedTime * 0.001 + this.id) * 0.0002;
+        // Cap max speed
+        if (this.speed > 0.003) this.speed = 0.003;
 
-        // Wobble - reduced by 50%
-        this.wobble += 0.015;
-        this.x += Math.sin(this.wobble) * 0.00075;
+        // Apply constant drift (wind/angle)
+        this.x += this.drift;
 
         // Keep in bounds
         this.x = Math.max(0.05, Math.min(0.95, this.x));
@@ -200,10 +202,25 @@ function startNewRound() {
         ? realHolders.map(h => h.wallet)
         : MOCK_WALLETS;
 
-    const count = Math.min(wallets.length, CONFIG.MIN_FIREWORKS + Math.floor(Math.random() * (CONFIG.MAX_FIREWORKS - CONFIG.MIN_FIREWORKS)));
+    // SCALABILITY: Cap at 50 fireworks per round
+    // If more holders, pick random 50 contenders
+    const MAX_CONCURRENT = 50;
+    let contenders = [...wallets];
+
+    if (contenders.length > MAX_CONCURRENT) {
+        // Shuffle and pick 50
+        for (let i = contenders.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [contenders[i], contenders[j]] = [contenders[j], contenders[i]];
+        }
+        contenders = contenders.slice(0, MAX_CONCURRENT);
+        console.log(`⚠️ Too many holders (${wallets.length}). Selected 50 random contenders.`);
+    }
+
+    const count = contenders.length;
 
     for (let i = 0; i < count; i++) {
-        const wallet = wallets[i % wallets.length];
+        const wallet = contenders[i];
         gameState.fireworks.push(new ServerFirework(i, wallet, i, count));
     }
 
