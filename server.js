@@ -51,7 +51,8 @@ let gameState = {
     winner: null,
     phase: 'racing', // 'racing', 'ended', 'waiting'
     roundStartTime: Date.now(),
-    winners: [] // History of winners
+    winners: [], // History of winners
+    cameraY: 0 // Camera position (follows fireworks up)
 };
 
 // ==========================================
@@ -144,6 +145,7 @@ function startNewRound() {
     gameState.phase = 'racing';
     gameState.roundStartTime = Date.now();
     gameState.fireworks = [];
+    gameState.cameraY = 0; // Reset camera
 
     // Generate fireworks
     const count = CONFIG.MIN_FIREWORKS + Math.floor(Math.random() * (CONFIG.MAX_FIREWORKS - CONFIG.MIN_FIREWORKS));
@@ -169,8 +171,13 @@ function updateGame() {
     // Update all fireworks
     gameState.fireworks.forEach(fw => fw.update(elapsedTime));
 
-    // Count active
+    // Update camera to follow the pack (average height of active fireworks)
     const active = gameState.fireworks.filter(fw => !fw.hasExploded);
+    if (active.length > 0) {
+        const avgHeight = active.reduce((sum, fw) => sum + (1 - fw.y), 0) / active.length;
+        // Smooth camera follow
+        gameState.cameraY += (avgHeight - gameState.cameraY) * 0.05;
+    }
 
     // Check winner conditions
     if (active.length === 1 && !gameState.winner) {
@@ -232,7 +239,8 @@ function getGameStateForClient() {
         fireworks: gameState.fireworks.map(fw => fw.toJSON()),
         winner: gameState.winner,
         phase: gameState.phase,
-        winners: gameState.winners.slice(0, 10)
+        winners: gameState.winners.slice(0, 10),
+        cameraY: gameState.cameraY // Send camera position to client
     };
 }
 

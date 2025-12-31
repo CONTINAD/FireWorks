@@ -29,7 +29,8 @@ let clientState = {
     prizePool: '0.00',
     totalDistributed: '0.0',
     winners: [],
-    lastReceivedRound: 0
+    lastReceivedRound: 0,
+    cameraY: 0 // Camera offset for scrolling
 };
 
 // ==========================================
@@ -110,12 +111,14 @@ class ClientFirework {
         this.size = 5;
     }
 
-    update(newData, canvasWidth, canvasHeight) {
+    update(newData, canvasWidth, canvasHeight, cameraY = 0) {
         const prevX = this.x;
         const prevY = this.y;
 
         this.x = newData.x * canvasWidth;
-        this.y = newData.y * canvasHeight;
+        // Apply camera offset - as cameraY increases, fireworks appear lower on screen
+        const rawY = newData.y * canvasHeight;
+        this.y = rawY + (cameraY * canvasHeight * 0.8);
         this.heightReached = newData.heightReached;
 
         // Check if just exploded
@@ -388,9 +391,10 @@ class GameRenderer {
         const activeCount = state.fireworks.filter(fw => !fw.hasExploded).length;
         document.getElementById('active-fireworks').textContent = activeCount;
 
-        // Update fireworks
+        // Update fireworks with camera offset
         const canvasWidth = this.gameCanvas.width;
         const canvasHeight = this.gameCanvas.height;
+        const cameraY = state.cameraY || 0;
 
         // Get IDs from server state
         const serverIds = new Set(state.fireworks.map(fw => fw.id));
@@ -404,9 +408,11 @@ class GameRenderer {
 
         state.fireworks.forEach(fwData => {
             if (this.clientFireworks.has(fwData.id)) {
-                this.clientFireworks.get(fwData.id).update(fwData, canvasWidth, canvasHeight);
+                this.clientFireworks.get(fwData.id).update(fwData, canvasWidth, canvasHeight, cameraY);
             } else {
-                this.clientFireworks.set(fwData.id, new ClientFirework(fwData, canvasWidth, canvasHeight));
+                const fw = new ClientFirework(fwData, canvasWidth, canvasHeight);
+                fw.update(fwData, canvasWidth, canvasHeight, cameraY);
+                this.clientFireworks.set(fwData.id, fw);
             }
         });
 
