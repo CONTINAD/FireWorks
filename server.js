@@ -117,8 +117,8 @@ class ServerFirework {
         this.y = 1.0; // Start at bottom (1.0 = bottom, 0.0 = top)
         this.startY = 1.0;
 
-        // Speed - tuned for ~25-30 sec games
-        this.baseSpeed = 0.001 + Math.random() * 0.0008;
+        // Speed - slower for longer games (~45 sec)
+        this.baseSpeed = 0.0006 + Math.random() * 0.0004;
         this.speed = this.baseSpeed;
         this.wobble = Math.random() * Math.PI * 2;
 
@@ -144,9 +144,9 @@ class ServerFirework {
         // Speed variation
         this.speed = this.baseSpeed + Math.sin(elapsedTime * 0.001 + this.id) * 0.0002;
 
-        // Wobble
-        this.wobble += 0.03;
-        this.x += Math.sin(this.wobble) * 0.0015;
+        // Wobble - reduced by 50%
+        this.wobble += 0.015;
+        this.x += Math.sin(this.wobble) * 0.00075;
 
         // Keep in bounds
         this.x = Math.max(0.05, Math.min(0.95, this.x));
