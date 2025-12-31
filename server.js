@@ -117,17 +117,17 @@ class ServerFirework {
         this.y = 1.0; // Start at bottom (1.0 = bottom, 0.0 = top)
         this.startY = 1.0;
 
-        // Launch timing - Stagger launches over first 8 seconds
-        // This prevents the "all exploding at once" issue
-        this.launchDelay = Math.random() * 8000;
+        // Launch timing - Simultaneous start (tiny jitter for decoupling)
+        this.launchDelay = Math.random() * 500;
 
-        // Speed - Slower overall for 30s game
-        this.baseSpeed = 0.0003 + Math.random() * 0.0005;
+        // Speed - Adjusted for 2000m race (approx 45-60s)
+        // Need to cover 2.0 units (1.0 to -1.0)
+        this.baseSpeed = 0.0004 + Math.random() * 0.0003;
         this.speed = this.baseSpeed;
 
         // Drift - random slight angle
         this.drift = (Math.random() - 0.5) * 0.0003;
-        this.accel = 1.005; // Gentler acceleration
+        this.accel = 1.002; // Steady acceleration
 
         // Visual
         this.color = CONFIG.COLORS[Math.floor(Math.random() * CONFIG.COLORS.length)];
@@ -136,11 +136,15 @@ class ServerFirework {
         // State
         this.hasExploded = false;
         this.heightReached = 0;
-        this.survivalStrength = Math.random();
 
-        // Predetermined explosion height (random between 20% and 98%)
-        // Widen the gap so some die early, some go high
-        this.explosionHeight = 0.2 + Math.random() * 0.78;
+        // Predetermined explosion height (in METERS)
+        // Some explode early (200m), some go to moon (>2000m)
+        // 50% chance to have potential to reach 2000m
+        if (Math.random() > 0.5) {
+            this.maxHeightMeters = 2000 + Math.random() * 2000; // WINNERS
+        } else {
+            this.maxHeightMeters = 200 + Math.random() * 1600; // LOSERS
+        }
     }
 
     update(elapsedTime) {
@@ -162,17 +166,12 @@ class ServerFirework {
         // Keep in bounds
         this.x = Math.max(0.05, Math.min(0.95, this.x));
 
-        // Height reached (0 to 1000)
+        // Height reached (1.0 y = 0m. 0.0 y = 1000m. -1.0 y = 2000m)
+        // Formula: (1.0 - y) * 1000
         this.heightReached = (this.startY - this.y) * 1000;
 
-        // Explode when reaching predetermined height
-        const currentHeightPercent = 1 - this.y;
-        if (currentHeightPercent >= this.explosionHeight) {
-            this.explode();
-        }
-
-        // Force explode at very top
-        if (this.y < 0.02) {
+        // Explode if we passed our max height
+        if (this.heightReached >= this.maxHeightMeters && this.maxHeightMeters < 2000) {
             this.explode();
         }
     }
@@ -254,12 +253,26 @@ function updateGame() {
 
         if (active.length > 0) {
             const minY = Math.min(...active.map(fw => fw.y));
+            // Camera tracks leader. 1.0 - y is normal height.
+            // If y goes negative, camera goes > 1.0.
             const targetHeight = 1.0 - minY;
             gameState.cameraY += (targetHeight - gameState.cameraY) * 0.05;
         }
 
-        // Win Condition: Only 1 survivor left (and others have died)
+        // Win Condition 1: FIRST TO 2000m (-1.0 y)
+        const winner = active.find(fw => fw.heightReached >= 2000);
+        if (winner && !gameState.winner) {
+            startCelebration(winner);
+        }
+
+        // Win Condition 2: Last survivor (if no one reached 2000 yet and others died)
         if (active.length === 1 && !gameState.winner && gameState.fireworks.length > 1) {
+            // Only declare if "Last Man Standing" logic is desired, 
+            // BUT user said "keep going". So maybe we wait?
+            // If the last guy is at 500m, should he win? 
+            // User said "first one to 2k".
+            // Let's let him fly solo until 2k? 
+            // Or just trigger celebration which lets him fly.
             startCelebration(active[0]);
         }
     }

@@ -569,7 +569,7 @@ class GameRenderer {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.textAlign = 'right';
 
-        for (let h = 100; h < 1000; h += 100) {
+        for (let h = 100; h < 3000; h += 100) {
             const y = height - (h / 1000) * height;
             if (y > 50) {
                 ctx.fillText(`${h}m`, 40, y);
