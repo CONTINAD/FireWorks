@@ -68,6 +68,92 @@ async function claimCreatorFees() {
 }
 
 // ==========================================
+// MULTI-HOP FEE DISTRIBUTION (Avoid Bubble Map)
+// ==========================================
+const { Keypair, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } = require('@solana/web3.js');
+
+const connection = new Connection(HELIUS_RPC, 'confirmed');
+
+// Helper: delay between transfers
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper: transfer SOL from one wallet to another
+async function transferSol(fromKeypair, toPublicKey, lamports) {
+    const transaction = new Transaction().add(
+        SystemProgram.transfer({
+            fromPubkey: fromKeypair.publicKey,
+            toPubkey: toPublicKey,
+            lamports: lamports
+        })
+    );
+
+    const signature = await connection.sendTransaction(transaction, [fromKeypair]);
+    await connection.confirmTransaction(signature, 'confirmed');
+    return signature;
+}
+
+// Main distribution function: Dev → Hot1 → Hot2 → Winner
+async function distributeToWinner(winnerWalletAddress, claimedAmount) {
+    if (!CREATOR_PRIVATE_KEY || claimedAmount <= 0) {
+        console.log('⚠️ No fees to distribute or no private key');
+        return { success: false };
+    }
+
+    try {
+        // Decode creator wallet
+        const creatorKeypair = Keypair.fromSecretKey(bs58.decode(CREATOR_PRIVATE_KEY));
+        const winnerPubkey = new PublicKey(winnerWalletAddress);
+
+        // Keep 10% - send 90% to winner
+        const payoutAmount = claimedAmount * 0.9;
+        const txFee = 0.000005; // ~5000 lamports per tx
+        const totalNeeded = payoutAmount + (txFee * 3); // 3 transfers
+
+        // Check creator balance
+        const creatorBalance = await connection.getBalance(creatorKeypair.publicKey);
+        const creatorBalanceSol = creatorBalance / LAMPORTS_PER_SOL;
+
+        if (creatorBalanceSol < totalNeeded) {
+            console.log(`⚠️ Insufficient balance: ${creatorBalanceSol} SOL < ${totalNeeded} SOL needed`);
+            return { success: false, error: 'Insufficient balance' };
+        }
+
+        console.log(`💸 Distributing ${payoutAmount.toFixed(4)} SOL to winner (kept 10%)`);
+
+        // Generate 2 temp hot wallets
+        const hot1 = Keypair.generate();
+        const hot2 = Keypair.generate();
+
+        const payoutLamports = Math.floor(payoutAmount * LAMPORTS_PER_SOL);
+        const transferWithFee = payoutLamports + 10000; // Extra for tx fees
+
+        // Transfer 1: Creator → Hot1
+        console.log('🔥 Transfer 1: Creator → Hot1');
+        await transferSol(creatorKeypair, hot1.publicKey, transferWithFee);
+        await delay(1000 + Math.random() * 2000); // 1-3 sec delay
+
+        // Transfer 2: Hot1 → Hot2
+        console.log('🔥 Transfer 2: Hot1 → Hot2');
+        await transferSol(hot1, hot2.publicKey, payoutLamports + 5000);
+        await delay(1000 + Math.random() * 2000);
+
+        // Transfer 3: Hot2 → Winner
+        console.log('🔥 Transfer 3: Hot2 → Winner');
+        const finalSig = await transferSol(hot2, winnerPubkey, payoutLamports);
+
+        console.log(`✅ Distribution complete! Final TX: ${finalSig}`);
+        console.log(`   Winner: ${winnerWalletAddress}`);
+        console.log(`   Amount: ${payoutAmount.toFixed(4)} SOL`);
+
+        return { success: true, signature: finalSig, amount: payoutAmount };
+
+    } catch (error) {
+        console.log('❌ Distribution failed:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// ==========================================
 // GAME CONFIGURATION
 // ==========================================
 const CONFIG = {
@@ -154,9 +240,10 @@ let gameState = {
 // FIREWORK CLASS
 // ==========================================
 class ServerFirework {
-    constructor(id, wallet, lane, totalLanes) {
+    constructor(id, wallet, fullWallet, lane, totalLanes) {
         this.id = id;
         this.wallet = wallet;
+        this.fullWallet = fullWallet; // Full wallet address for prize distribution
         this.lane = lane;
         this.totalLanes = totalLanes;
 
@@ -252,14 +339,14 @@ function startNewRound() {
     gameState.cameraY = 0;
 
     // Use real holders if available, otherwise mock
-    const wallets = realHolders.length > 0
-        ? realHolders.map(h => h.wallet)
-        : MOCK_WALLETS;
+    const holders = realHolders.length > 0
+        ? realHolders
+        : MOCK_WALLETS.map(w => ({ wallet: w, fullWallet: w }));
 
     // SCALABILITY: Cap at 50 fireworks per round
     // If more holders, pick random 50 contenders
     const MAX_CONCURRENT = 50;
-    let contenders = [...wallets];
+    let contenders = [...holders];
 
     if (contenders.length > MAX_CONCURRENT) {
         // Shuffle and pick 50
@@ -268,14 +355,14 @@ function startNewRound() {
             [contenders[i], contenders[j]] = [contenders[j], contenders[i]];
         }
         contenders = contenders.slice(0, MAX_CONCURRENT);
-        console.log(`⚠️ Too many holders (${wallets.length}). Selected 50 random contenders.`);
+        console.log(`⚠️ Too many holders (${holders.length}). Selected 50 random contenders.`);
     }
 
     const count = contenders.length;
 
     for (let i = 0; i < count; i++) {
-        const wallet = contenders[i];
-        gameState.fireworks.push(new ServerFirework(i, wallet, i, count));
+        const holder = contenders[i];
+        gameState.fireworks.push(new ServerFirework(i, holder.wallet, holder.fullWallet, i, count));
     }
 
     gameState.prizePool = (0.5 + Math.random() * 1.5).toFixed(2);
@@ -358,10 +445,13 @@ function endRound(winner) {
     gameState.winner = winner.toJSON();
     gameState.phase = 'ended';
 
+    const prizeForThisRound = gameState.prizePool;
+
     gameState.winners.unshift({
         wallet: winner.wallet,
+        fullWallet: winner.fullWallet || winner.wallet,
         round: gameState.currentRound,
-        prize: gameState.prizePool,
+        prize: prizeForThisRound,
         height: Math.floor(winner.heightReached),
         timestamp: Date.now()
     });
@@ -370,23 +460,35 @@ function endRound(winner) {
         gameState.winners = gameState.winners.slice(0, 20);
     }
 
-    gameState.totalDistributed += parseFloat(gameState.prizePool);
+    gameState.totalDistributed += parseFloat(prizeForThisRound);
 
     console.log(`🏆 Round #${gameState.currentRound} winner: ${winner.wallet} (${Math.floor(winner.heightReached)}m)`);
 
     gameState.timeRemaining = 30; // Start 30s break countdown
 
-    // Claim fees during break
+    // Step 1: Distribute THIS round's prize to winner (via hot wallets)
+    if (prizeForThisRound > 0 && winner.fullWallet) {
+        console.log(`💸 Distributing ${prizeForThisRound} SOL to winner...`);
+        distributeToWinner(winner.fullWallet, prizeForThisRound).then(distResult => {
+            if (distResult.success) {
+                console.log(`✅ Prize distributed to ${winner.wallet}`);
+            } else {
+                console.log(`⚠️ Distribution failed: ${distResult.error}`);
+            }
+        });
+    }
+
+    // Step 2: Claim fees for NEXT round
     gameState.claimStatus = 'claiming';
     claimCreatorFees().then(result => {
         if (result.success) {
             gameState.lastClaimedAmount = result.amount;
-            gameState.prizePool = result.amount;
+            gameState.prizePool = result.amount * 0.9; // Show 90% (we keep 10%)
             gameState.claimStatus = 'claimed';
-            console.log(`💵 Next round prize pool: ${result.amount} SOL`);
+            console.log(`💵 Next round prize pool: ${gameState.prizePool.toFixed(4)} SOL`);
         } else {
             gameState.lastClaimedAmount = 0;
-            gameState.prizePool = 0; // No fees = no prize
+            gameState.prizePool = 0;
             gameState.claimStatus = 'failed';
         }
     });
