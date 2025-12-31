@@ -1622,72 +1622,118 @@ body {
 }
 
 /* ==========================================
-   NEW YEAR COUNTDOWN SECTION
+   NEW YEAR COUNTDOWN BANNER (TOP)
    ========================================== */
-.newyear-section {
-    padding: 80px 0;
-    background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-    position: relative;
-    z-index: 1;
+.ny-countdown-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1001;
+    background: linear-gradient(90deg,
+            rgba(153, 69, 255, 0.15) 0%,
+            rgba(255, 149, 0, 0.15) 50%,
+            rgba(153, 69, 255, 0.15) 100%);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+    padding: 8px 0;
 }
 
-.ny-countdown-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 16px;
-    margin-top: 40px;
+.ny-countdown-inner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
 }
 
-.countdown-item {
-    background: var(--bg-card);
-    border: var(--border-glass);
-    border-radius: var(--border-radius);
-    padding: 20px 16px;
-    text-align: center;
-    font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
+.ny-countdown-banner .countdown-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(10, 10, 26, 0.6);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #ffffff;
     transition: all 0.3s ease;
 }
 
-.countdown-item:hover {
-    transform: translateY(-4px);
-    border-color: rgba(255, 215, 0, 0.3);
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.15);
+.ny-countdown-banner .countdown-item:hover {
+    border-color: rgba(255, 215, 0, 0.6);
+    transform: translateY(-1px);
 }
 
-.countdown-item.celebrated {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 149, 0, 0.1) 100%);
-    border-color: rgba(255, 215, 0, 0.4);
-    animation: celebrate-pulse 1s ease-in-out infinite;
+.ny-countdown-banner .tz-name {
+    font-weight: 700;
+    color: #ffd700;
 }
 
-@keyframes celebrate-pulse {
+.ny-countdown-banner .tz-time {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: #00ff88;
+}
+
+.ny-countdown-banner .celebrate {
+    color: #ffd700;
+    animation: celebrate-glow 1s ease-in-out infinite;
+}
+
+.ny-countdown-banner .countdown-item.celebrated {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 149, 0, 0.15) 100%);
+    border-color: rgba(255, 215, 0, 0.5);
+}
+
+@keyframes celebrate-glow {
 
     0%,
     100% {
-        transform: scale(1);
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     }
 
     50% {
-        transform: scale(1.02);
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
     }
 }
 
-@media (max-width: 992px) {
-    .ny-countdown-grid {
-        grid-template-columns: repeat(3, 1fr);
+/* Adjust body/navbar for top banner */
+body {
+    padding-top: 50px;
+}
+
+.navbar {
+    top: 44px;
+}
+
+@media (max-width: 768px) {
+    .ny-countdown-banner .countdown-item {
+        font-size: 10px;
+        padding: 4px 10px;
+    }
+
+    .ny-countdown-inner {
+        gap: 6px;
+    }
+
+    body {
+        padding-top: 90px;
+    }
+
+    .navbar {
+        top: 50px;
     }
 }
 
-@media (max-width: 576px) {
-    .ny-countdown-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .countdown-item {
-        font-size: 12px;
-        padding: 16px 12px;
+@media (max-width: 480px) {
+    .ny-countdown-banner .countdown-item {
+        font-size: 9px;
+        padding: 4px 8px;
     }
 }

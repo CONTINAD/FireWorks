@@ -580,37 +580,45 @@ class GameRenderer {
     startNewYearCountdowns() {
         const updateCountdowns = () => {
             const now = new Date();
-            const year = now.getFullYear();
-            const nextYear = now.getMonth() === 11 && now.getDate() === 31 ? year + 1 : year + 1;
 
+            // Target: January 1, 2025 00:00:00 in each timezone
             const timezones = [
-                { name: 'NYC', offset: -5, emoji: '🗽' },
-                { name: 'LA', offset: -8, emoji: '🌴' },
-                { name: 'London', offset: 0, emoji: '🇬🇧' },
-                { name: 'Dubai', offset: 4, emoji: '🇦🇪' },
-                { name: 'Tokyo', offset: 9, emoji: '🇯🇵' },
-                { name: 'Sydney', offset: 11, emoji: '🇦🇺' }
+                { name: 'NYC', tz: 'America/New_York', emoji: '🗽' },
+                { name: 'LA', tz: 'America/Los_Angeles', emoji: '🌴' },
+                { name: 'London', tz: 'Europe/London', emoji: '🇬🇧' },
+                { name: 'Dubai', tz: 'Asia/Dubai', emoji: '🇦🇪' },
+                { name: 'Tokyo', tz: 'Asia/Tokyo', emoji: '🇯🇵' },
+                { name: 'Sydney', tz: 'Australia/Sydney', emoji: '🇦🇺' }
             ];
 
             const container = document.getElementById('ny-countdowns');
             if (!container) return;
 
             container.innerHTML = timezones.map(tz => {
-                const localNow = new Date(now.getTime() + (now.getTimezoneOffset() + tz.offset * 60) * 60000);
-                const newYear = new Date(nextYear, 0, 1, 0, 0, 0);
-                const tzNewYear = new Date(newYear.getTime() - tz.offset * 60 * 60000);
+                // Get current time in the target timezone
+                const options = { timeZone: tz.tz, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
+                const formatter = new Intl.DateTimeFormat('en-US', options);
+                const parts = formatter.formatToParts(now);
 
-                let diff = tzNewYear - now;
+                const tzYear = parseInt(parts.find(p => p.type === 'year').value);
+                const tzMonth = parseInt(parts.find(p => p.type === 'month').value);
+                const tzDay = parseInt(parts.find(p => p.type === 'day').value);
+                const tzHour = parseInt(parts.find(p => p.type === 'hour').value);
+                const tzMin = parseInt(parts.find(p => p.type === 'minute').value);
+                const tzSec = parseInt(parts.find(p => p.type === 'second').value);
 
-                if (diff <= 0) {
-                    return `<div class="countdown-item celebrated">${tz.emoji} ${tz.name}: 🎉 2025!</div>`;
+                // Check if already 2025 in this timezone
+                if (tzYear >= 2025) {
+                    return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2025!</span></div>`;
                 }
 
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                // Calculate remaining time until midnight
+                const secsUntilMidnight = (24 - tzHour - 1) * 3600 + (60 - tzMin - 1) * 60 + (60 - tzSec);
+                const hours = Math.floor(secsUntilMidnight / 3600);
+                const minutes = Math.floor((secsUntilMidnight % 3600) / 60);
+                const seconds = secsUntilMidnight % 60;
 
-                return `<div class="countdown-item">${tz.emoji} ${tz.name}: ${hours}h ${minutes}m ${seconds}s</div>`;
+                return `<div class="countdown-item">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="tz-time">${hours}h ${minutes}m ${seconds}s</span></div>`;
             }).join('');
         };
 
