@@ -617,14 +617,14 @@ class GameRenderer {
         const updateCountdowns = () => {
             const now = new Date();
 
-            // ISO Time strings for 2025 New Year
+            // ISO Time strings for 2026 New Year
             const timezones = [
-                { name: 'NYC', time: '2025-01-01T00:00:00-05:00', emoji: '🗽' },
-                { name: 'LA', time: '2025-01-01T00:00:00-08:00', emoji: '🌴' },
-                { name: 'London', time: '2025-01-01T00:00:00+00:00', emoji: '🇬🇧' },
-                { name: 'Dubai', time: '2025-01-01T00:00:00+04:00', emoji: '🇦🇪' },
-                { name: 'Tokyo', time: '2025-01-01T00:00:00+09:00', emoji: '🇯🇵' },
-                { name: 'Sydney', time: '2025-01-01T00:00:00+11:00', emoji: '🇦🇺' }
+                { name: 'NYC', time: '2026-01-01T00:00:00-05:00', emoji: '🗽' },
+                { name: 'LA', time: '2026-01-01T00:00:00-08:00', emoji: '🌴' },
+                { name: 'London', time: '2026-01-01T00:00:00+00:00', emoji: '🇬🇧' },
+                { name: 'Dubai', time: '2026-01-01T00:00:00+04:00', emoji: '🇦🇪' },
+                { name: 'Tokyo', time: '2026-01-01T00:00:00+09:00', emoji: '🇯🇵' },
+                { name: 'Sydney', time: '2026-01-01T00:00:00+11:00', emoji: '🇦🇺' }
             ];
 
             const container = document.getElementById('ny-countdowns');
@@ -634,15 +634,15 @@ class GameRenderer {
                 const targetTime = new Date(tz.time).getTime();
                 let diff = targetTime - now.getTime();
 
-                // If diff is negative by MORE than 1 day, user's clock is probably wrong (set to 2025)
+                // If diff is negative by MORE than 1 day, user's clock is probably wrong (set to 2026)
                 // Just show celebration
                 if (diff < -86400000) {
-                    return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2025!</span></div>`;
+                    return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2026!</span></div>`;
                 }
 
                 // Normal countdown
                 if (diff <= 0) {
-                    return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2025!</span></div>`;
+                    return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2026!</span></div>`;
                 }
 
                 const totalSecs = Math.floor(diff / 1000);
