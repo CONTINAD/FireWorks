@@ -12,9 +12,10 @@ const socket = io();
 // CONFIGURATION
 // ==========================================
 const CONFIG = {
-    PARTICLE_COUNT: 50,
+    PARTICLE_COUNT: 40,
     GRAVITY: 0.025,
-    FRICTION: 0.98
+    FRICTION: 0.98,
+    ROUND_DURATION: 45
 };
 
 // ==========================================
@@ -25,11 +26,14 @@ let clientState = {
     winner: null,
     phase: 'racing',
     currentRound: 0,
-    timeRemaining: 30,
+    timeRemaining: 45,
     prizePool: '0.00',
     totalDistributed: '0.0',
     winners: [],
-    lastReceivedRound: 0
+    lastReceivedRound: 0,
+    cameraY: 0,
+    activeCount: 0,
+    totalCount: 0
 };
 
 // ==========================================
@@ -47,15 +51,15 @@ class Particle {
             this.vy = Math.random() * 1.5 + 0.5;
             this.life = 0.4 + Math.random() * 0.2;
             this.size = 2 + Math.random() * 2;
-            this.decay = 0.02;
+            this.decay = 0.025;
         } else {
             const angle = Math.random() * Math.PI * 2;
-            const speed = 2 + Math.random() * 5;
+            const speed = 2 + Math.random() * 4;
             this.vx = Math.cos(angle) * speed;
             this.vy = Math.sin(angle) * speed;
             this.life = 1;
-            this.size = 2 + Math.random() * 4;
-            this.decay = 0.012 + Math.random() * 0.008;
+            this.size = 2 + Math.random() * 3;
+            this.decay = 0.015 + Math.random() * 0.01;
         }
     }
 
@@ -75,7 +79,7 @@ class Particle {
         ctx.globalAlpha = Math.max(0, this.life);
         ctx.fillStyle = this.color;
         ctx.shadowColor = this.color;
-        ctx.shadowBlur = this.isTrail ? 5 : 15;
+        ctx.shadowBlur = this.isTrail ? 5 : 12;
         ctx.beginPath();
         ctx.arc(this.x, this.y, Math.max(0.5, this.size), 0, Math.PI * 2);
         ctx.fill();
@@ -88,7 +92,7 @@ class Particle {
 }
 
 // ==========================================
-// CLIENT FIREWORK (Visual only)
+// CLIENT FIREWORK (with camera offset)
 // ==========================================
 class ClientFirework {
     constructor(data, canvasWidth, canvasHeight) {
@@ -99,24 +103,32 @@ class ClientFirework {
         this.hasExploded = data.hasExploded;
         this.heightReached = data.heightReached;
 
-        // Convert normalized position to canvas coords
-        this.x = data.x * canvasWidth;
-        this.y = data.y * canvasHeight;
+        // Store normalized positions
+        this.normalizedX = data.x;
+        this.normalizedY = data.y;
+
+        this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
 
         this.trail = [];
         this.particles = [];
         this.wasExploded = data.hasExploded;
-        this.size = 5;
+        this.size = 4;
     }
 
-    update(newData, canvasWidth, canvasHeight) {
-        const prevX = this.x;
-        const prevY = this.y;
-
-        this.x = newData.x * canvasWidth;
-        this.y = newData.y * canvasHeight;
+    update(newData, canvasWidth, canvasHeight, cameraY) {
+        this.normalizedX = newData.x;
+        this.normalizedY = newData.y;
         this.heightReached = newData.heightReached;
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+
+        // Convert to screen position with camera offset
+        this.x = this.normalizedX * canvasWidth;
+        // Y position: higher normalizedY = higher up = lower screen Y
+        // Camera follows upward, so we offset by cameraY
+        const relativeY = this.normalizedY - cameraY;
+        this.y = canvasHeight - (relativeY * canvasHeight * 1.5) - 60;
 
         // Check if just exploded
         if (newData.hasExploded && !this.wasExploded) {
@@ -126,9 +138,9 @@ class ClientFirework {
         this.hasExploded = newData.hasExploded;
 
         // Add trail if moving and not exploded
-        if (!this.hasExploded && Math.random() > 0.3) {
+        if (!this.hasExploded && Math.random() > 0.4) {
             this.trail.push(new Particle(
-                this.x + (Math.random() - 0.5) * 4,
+                this.x + (Math.random() - 0.5) * 3,
                 this.y + 5,
                 this.color,
                 true
@@ -151,12 +163,16 @@ class ClientFirework {
         for (let i = 0; i < CONFIG.PARTICLE_COUNT; i++) {
             this.particles.push(new Particle(this.x, this.y, this.color, false));
         }
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 20; i++) {
             this.particles.push(new Particle(this.x, this.y, this.secondaryColor, false));
         }
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 15; i++) {
             this.particles.push(new Particle(this.x, this.y, '#ffffff', false));
         }
+    }
+
+    isOnScreen(canvasHeight) {
+        return this.y > -100 && this.y < canvasHeight + 100;
     }
 
     draw(ctx) {
@@ -168,10 +184,13 @@ class ClientFirework {
 
         if (this.hasExploded) return;
 
+        // Only draw if on screen
+        if (!this.isOnScreen(this.canvasHeight)) return;
+
         // Draw firework
         ctx.save();
         ctx.shadowColor = this.color;
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 15;
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -179,27 +198,22 @@ class ClientFirework {
 
         // Inner core
         ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size * 0.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        // Label
+        // Wallet label (smaller for more holders)
         ctx.save();
-        ctx.font = 'bold 11px monospace';
+        ctx.font = 'bold 9px monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        const label = this.wallet;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        const label = this.wallet.substring(0, 6);
         const textWidth = ctx.measureText(label).width;
-        ctx.fillRect(this.x - textWidth / 2 - 4, this.y - 25, textWidth + 8, 16);
+        ctx.fillRect(this.x - textWidth / 2 - 3, this.y - 20, textWidth + 6, 12);
         ctx.fillStyle = this.color;
-        ctx.fillText(label, this.x, this.y - 13);
-
-        // Height
-        ctx.font = '9px monospace';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.fillText(this.heightReached + 'm', this.x, this.y - 35);
+        ctx.fillText(label, this.x, this.y - 11);
         ctx.restore();
     }
 }
@@ -237,7 +251,7 @@ class BackgroundFirework {
 
     explode() {
         this.hasExploded = true;
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 35; i++) {
             this.particles.push(new Particle(this.x, this.y, this.color, false));
         }
     }
@@ -274,6 +288,8 @@ class GameRenderer {
 
         this.clientFireworks = new Map();
         this.bgFireworks = [];
+        this.cameraY = 0;
+        this.targetCameraY = 0;
 
         this.setupCanvases();
         this.bindEvents();
@@ -343,10 +359,10 @@ class GameRenderer {
 
     setupSocketListeners() {
         socket.on('gameState', (state) => {
-            // If round changed, clear old fireworks first
             if (state.currentRound !== clientState.lastReceivedRound) {
                 this.clientFireworks.clear();
                 clientState.lastReceivedRound = state.currentRound;
+                this.cameraY = 0;
             }
             this.updateFromServer(state);
         });
@@ -354,6 +370,8 @@ class GameRenderer {
         socket.on('newRound', (state) => {
             this.clientFireworks.clear();
             clientState.lastReceivedRound = state.currentRound;
+            this.cameraY = 0;
+            this.targetCameraY = 0;
             document.getElementById('game-overlay').classList.remove('active');
             this.updateFromServer(state);
         });
@@ -366,7 +384,6 @@ class GameRenderer {
             this.updateWinnersTable(winners);
         });
 
-        // Handle reconnection - clear and resync
         socket.on('connect', () => {
             console.log('🔌 Connected to server');
             this.clientFireworks.clear();
@@ -376,26 +393,35 @@ class GameRenderer {
     updateFromServer(state) {
         clientState = { ...clientState, ...state };
 
+        // Update camera target
+        this.targetCameraY = state.cameraY || 0;
+
+        // Smooth camera follow
+        this.cameraY += (this.targetCameraY - this.cameraY) * 0.1;
+
         // Update UI
         document.getElementById('current-round').textContent = `#${state.currentRound}`;
-        document.getElementById('game-timer').textContent = `0:${state.timeRemaining.toString().padStart(2, '0')}`;
-        document.getElementById('hero-countdown').textContent = `0:${state.timeRemaining.toString().padStart(2, '0')}`;
-        document.getElementById('timer-progress').style.width = `${(state.timeRemaining / 30) * 100}%`;
+        const timeStr = state.timeRemaining >= 60
+            ? `${Math.floor(state.timeRemaining / 60)}:${(state.timeRemaining % 60).toString().padStart(2, '0')}`
+            : `0:${state.timeRemaining.toString().padStart(2, '0')}`;
+        document.getElementById('game-timer').textContent = timeStr;
+        document.getElementById('hero-countdown').textContent = timeStr;
+        document.getElementById('timer-progress').style.width = `${(state.timeRemaining / CONFIG.ROUND_DURATION) * 100}%`;
         document.getElementById('prize-pool').textContent = `${state.prizePool} SOL`;
         document.getElementById('total-distributed').textContent = state.totalDistributed;
         document.getElementById('total-given').textContent = `${state.totalDistributed} SOL`;
 
-        const activeCount = state.fireworks.filter(fw => !fw.hasExploded).length;
-        document.getElementById('active-fireworks').textContent = activeCount;
+        // Show active/total count
+        const activeCount = state.activeCount || state.fireworks.filter(fw => !fw.hasExploded).length;
+        const totalCount = state.totalCount || state.fireworks.length;
+        document.getElementById('active-fireworks').textContent = `${activeCount} / ${totalCount}`;
 
         // Update fireworks
         const canvasWidth = this.gameCanvas.width;
         const canvasHeight = this.gameCanvas.height;
 
-        // Get IDs from server state
         const serverIds = new Set(state.fireworks.map(fw => fw.id));
 
-        // Remove any fireworks not in server state (cleanup stale ones)
         for (const id of this.clientFireworks.keys()) {
             if (!serverIds.has(id)) {
                 this.clientFireworks.delete(id);
@@ -404,9 +430,11 @@ class GameRenderer {
 
         state.fireworks.forEach(fwData => {
             if (this.clientFireworks.has(fwData.id)) {
-                this.clientFireworks.get(fwData.id).update(fwData, canvasWidth, canvasHeight);
+                this.clientFireworks.get(fwData.id).update(fwData, canvasWidth, canvasHeight, this.cameraY);
             } else {
-                this.clientFireworks.set(fwData.id, new ClientFirework(fwData, canvasWidth, canvasHeight));
+                const fw = new ClientFirework(fwData, canvasWidth, canvasHeight);
+                fw.update(fwData, canvasWidth, canvasHeight, this.cameraY);
+                this.clientFireworks.set(fwData.id, fw);
             }
         });
 
@@ -427,7 +455,7 @@ class GameRenderer {
             heightInfo.style.cssText = 'font-size: 16px; color: #00ff88; margin-top: 8px;';
             overlay.querySelector('.winner-announcement').appendChild(heightInfo);
         }
-        heightInfo.textContent = `🚀 Reached ${data.winner.heightReached}m - HIGHEST CLIMBER!`;
+        heightInfo.textContent = `🚀 Reached ${data.winner.heightReached}m - THE LAST SURVIVOR!`;
 
         overlay.classList.add('active');
     }
@@ -466,10 +494,10 @@ class GameRenderer {
 
     startBackgroundShow() {
         setInterval(() => {
-            if (Math.random() > 0.4) {
+            if (Math.random() > 0.5) {
                 this.bgFireworks.push(new BackgroundFirework(this.bgCanvas));
             }
-        }, 600);
+        }, 700);
 
         const animateBg = () => {
             this.bgCtx.clearRect(0, 0, this.bgCanvas.width, this.bgCanvas.height);
@@ -494,12 +522,12 @@ class GameRenderer {
     drawGame() {
         const ctx = this.gameCtx;
 
-        // Clear with fade
-        ctx.fillStyle = 'rgba(5, 5, 16, 0.15)';
+        // Clear with fade for trail effect
+        ctx.fillStyle = 'rgba(5, 5, 16, 0.12)';
         ctx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
 
-        // Height markers
-        this.drawHeightMarkers();
+        // Draw height indicator
+        this.drawHeightIndicator();
 
         // Draw all fireworks
         this.clientFireworks.forEach(fw => fw.draw(ctx));
@@ -507,37 +535,24 @@ class GameRenderer {
         // Leader indicator
         this.drawLeaderIndicator();
 
-        // Stars
-        this.drawStars();
+        // Draw survivor count
+        this.drawSurvivorCount();
     }
 
-    drawHeightMarkers() {
+    drawHeightIndicator() {
         const ctx = this.gameCtx;
-        const height = this.gameCanvas.height;
+        const height = Math.floor(this.cameraY * 1000);
 
         ctx.save();
-        ctx.font = '10px monospace';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-        ctx.textAlign = 'right';
-
-        for (let h = 100; h < 800; h += 100) {
-            const y = height - (h / 1000) * height;
-            if (y > 50) {
-                ctx.fillText(`${h}m`, 40, y);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-                ctx.setLineDash([5, 10]);
-                ctx.beginPath();
-                ctx.moveTo(50, y);
-                ctx.lineTo(this.gameCanvas.width - 20, y);
-                ctx.stroke();
-            }
-        }
-        ctx.setLineDash([]);
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
+        ctx.textAlign = 'left';
+        ctx.fillText(`↑ ${height}m`, 15, 30);
         ctx.restore();
     }
 
     drawLeaderIndicator() {
-        const active = Array.from(this.clientFireworks.values()).filter(fw => !fw.hasExploded);
+        const active = Array.from(this.clientFireworks.values()).filter(fw => !fw.hasExploded && fw.isOnScreen(this.gameCanvas.height));
         if (active.length === 0) return;
 
         const leader = active.reduce((max, fw) => fw.heightReached > max.heightReached ? fw : max);
@@ -549,23 +564,23 @@ class GameRenderer {
         ctx.fillStyle = '#ffd700';
         ctx.shadowColor = '#ffd700';
         ctx.shadowBlur = 10;
-        ctx.fillText('👑 LEADING', leader.x, leader.y - 50);
+        ctx.fillText('👑 LEADING', leader.x, leader.y - 35);
         ctx.restore();
     }
 
-    drawStars() {
-        const ctx = this.gameCtx;
-        const time = Date.now() / 1000;
+    drawSurvivorCount() {
+        const active = Array.from(this.clientFireworks.values()).filter(fw => !fw.hasExploded);
+        const total = this.clientFireworks.size;
 
-        for (let i = 0; i < 40; i++) {
-            const x = (i * 47 + 20) % this.gameCanvas.width;
-            const y = (i * 31 + 10) % (this.gameCanvas.height - 150);
-            const twinkle = Math.sin(time * 2 + i) * 0.5 + 0.5;
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.05 + twinkle * 0.15})`;
-            ctx.beginPath();
-            ctx.arc(x, y, 1, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        if (total === 0) return;
+
+        const ctx = this.gameCtx;
+        ctx.save();
+        ctx.font = 'bold 14px monospace';
+        ctx.fillStyle = active.length <= 5 ? '#ff4444' : active.length <= 15 ? '#ffaa00' : '#00ff88';
+        ctx.textAlign = 'right';
+        ctx.fillText(`🎆 ${active.length} survivors`, this.gameCanvas.width - 15, 30);
+        ctx.restore();
     }
 
     // ==========================================
@@ -644,5 +659,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    console.log('🎆 $FIREWORK Client Connected - Happy New Year 2025! 🎆');
+    console.log('🎆 $FIREWORK Race Client - 50 Holders Battle! 🎆');
 });
