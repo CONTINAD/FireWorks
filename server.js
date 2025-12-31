@@ -71,7 +71,7 @@ async function claimCreatorFees() {
 // GAME CONFIGURATION
 // ==========================================
 const CONFIG = {
-    ROUND_DURATION: 30, // 30 second rounds
+    ROUND_DURATION: 120, // 2 minute rounds
     MIN_FIREWORKS: 12,
     MAX_FIREWORKS: 18,
     TICK_RATE: 60,
@@ -166,15 +166,15 @@ class ServerFirework {
         this.startY = 1.0;
 
         // Launch timing - Simultaneous start (tiny jitter for decoupling)
-        this.launchDelay = Math.random() * 300;
+        this.launchDelay = Math.random() * 500;
 
-        // Speed - SLOWER for 20+ second races, TIGHT variance for neck-and-neck
-        this.baseSpeed = 0.0003 + Math.random() * 0.00015;
+        // Speed - SLOWER for 2 minute races, TIGHT variance for neck-and-neck
+        this.baseSpeed = 0.00012 + Math.random() * 0.00006;
         this.speed = this.baseSpeed;
 
         // Drift - minimal so they stay close
-        this.drift = (Math.random() - 0.5) * 0.00015;
-        this.accel = 1.0015; // Gentle acceleration
+        this.drift = (Math.random() - 0.5) * 0.0001;
+        this.accel = 1.0008; // Very gentle acceleration
 
         // Visual
         this.color = CONFIG.COLORS[Math.floor(Math.random() * CONFIG.COLORS.length)];
