@@ -70,8 +70,8 @@ class ServerFirework {
         this.y = 1.0; // Start at bottom
         this.startY = 1.0;
 
-        // Racing properties - SLOWER for longer games (~30 sec)
-        this.baseSpeed = 0.0008 + Math.random() * 0.0006;
+        // Racing properties - balanced speed for ~30 sec games
+        this.baseSpeed = 0.0018 + Math.random() * 0.001;
         this.speed = this.baseSpeed;
         this.wobble = Math.random() * Math.PI * 2;
 
