@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const bs58 = require('bs58');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,6 +21,51 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ==========================================
 const HELIUS_RPC = 'https://mainnet.helius-rpc.com/?api-key=ae211108-bdbf-40af-90e2-c5418e3f62d3';
 const TOKEN_CA = 'G5TDFMyGsgJ4rWXxatzxZEcYJmVkTjG3mZTZMnbRpump';
+
+// ==========================================
+// PUMPPORTAL CONFIGURATION
+// ==========================================
+const CREATOR_PRIVATE_KEY = process.env.CREATOR_PRIVATE_KEY || '';
+const PUMPPORTAL_API = 'https://pumpportal.fun/api/trade-local';
+
+// ==========================================
+// CLAIM CREATOR FEES FROM PUMPFUN
+// ==========================================
+async function claimCreatorFees() {
+    if (!CREATOR_PRIVATE_KEY) {
+        console.log('⚠️ No CREATOR_PRIVATE_KEY set, skipping fee claim');
+        return { success: false, amount: 0 };
+    }
+
+    try {
+        console.log('💰 Claiming creator fees from PumpFun...');
+
+        const response = await fetch(PUMPPORTAL_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'collectCreatorFee',
+                poolType: 'pump',
+                privateKey: CREATOR_PRIVATE_KEY
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.signature) {
+            console.log(`✅ Claimed fees! TX: ${result.signature}`);
+            // Parse amount from result or estimate
+            const amount = result.amountClaimed || 0.1; // fallback estimate
+            return { success: true, amount, signature: result.signature };
+        } else {
+            console.log('⚠️ Claim response:', result);
+            return { success: false, amount: 0, error: result.error };
+        }
+    } catch (error) {
+        console.log('❌ Fee claim failed:', error.message);
+        return { success: false, amount: 0, error: error.message };
+    }
+}
 
 // ==========================================
 // GAME CONFIGURATION
@@ -99,7 +145,9 @@ let gameState = {
     phase: 'racing',
     roundStartTime: Date.now(),
     winners: [],
-    cameraY: 0
+    cameraY: 0,
+    lastClaimedAmount: 0,
+    claimStatus: 'idle' // idle, claiming, claimed, failed
 };
 
 // ==========================================
@@ -328,6 +376,21 @@ function endRound(winner) {
 
     gameState.timeRemaining = 30; // Start 30s break countdown
 
+    // Claim fees during break
+    gameState.claimStatus = 'claiming';
+    claimCreatorFees().then(result => {
+        if (result.success) {
+            gameState.lastClaimedAmount = result.amount;
+            gameState.prizePool = result.amount;
+            gameState.claimStatus = 'claimed';
+            console.log(`💵 Next round prize pool: ${result.amount} SOL`);
+        } else {
+            gameState.lastClaimedAmount = 0;
+            gameState.prizePool = 0; // No fees = no prize
+            gameState.claimStatus = 'failed';
+        }
+    });
+
     // Broadcast immediately so client sees "ended" state logic
     io.emit('roundEnded', {
         winner: gameState.winner,
@@ -346,7 +409,9 @@ function getGameStateForClient() {
         winner: gameState.winner,
         phase: gameState.phase,
         winners: gameState.winners.slice(0, 10),
-        cameraY: gameState.cameraY
+        cameraY: gameState.cameraY,
+        claimStatus: gameState.claimStatus,
+        lastClaimedAmount: gameState.lastClaimedAmount
     };
 }
 
