@@ -118,7 +118,7 @@ class ClientFirework {
         this.x = newData.x * canvasWidth;
         // Apply gentle camera offset - fireworks should still visually climb
         const rawY = newData.y * canvasHeight;
-        this.y = rawY + (cameraY * canvasHeight * 0.6);
+        this.y = rawY + (cameraY * canvasHeight * 0.95);
         this.heightReached = newData.heightReached;
 
         // Check if just exploded
@@ -571,15 +571,14 @@ class GameRenderer {
 
         for (let h = 100; h < 3000; h += 100) {
             const y = height - (h / 1000) * height;
-            if (y > 50) {
-                ctx.fillText(`${h}m`, 40, y);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-                ctx.setLineDash([5, 10]);
-                ctx.beginPath();
-                ctx.moveTo(50, y);
-                ctx.lineTo(this.gameCanvas.width - 20, y);
-                ctx.stroke();
-            }
+            // Draw ALL markers - camera transform handles visibility
+            ctx.fillText(`${h}m`, 40, y);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.setLineDash([5, 10]);
+            ctx.beginPath();
+            ctx.moveTo(50, y);
+            ctx.lineTo(this.gameCanvas.width - 20, y);
+            ctx.stroke();
         }
         ctx.setLineDash([]);
         ctx.restore();
