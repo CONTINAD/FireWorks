@@ -381,8 +381,13 @@ class GameRenderer {
 
         // Update UI
         document.getElementById('current-round').textContent = `#${state.currentRound}`;
-        document.getElementById('game-timer').textContent = `0:${state.timeRemaining.toString().padStart(2, '0')}`;
-        document.getElementById('hero-countdown').textContent = `0:${state.timeRemaining.toString().padStart(2, '0')}`;
+        if (state.phase === 'celebrating') {
+            document.getElementById('game-timer').textContent = "WINNER!";
+            document.getElementById('hero-countdown').textContent = "WINNER!";
+        } else {
+            document.getElementById('game-timer').textContent = `0:${state.timeRemaining.toString().padStart(2, '0')}`;
+            document.getElementById('hero-countdown').textContent = `0:${state.timeRemaining.toString().padStart(2, '0')}`;
+        }
         document.getElementById('timer-progress').style.width = `${(state.timeRemaining / 30) * 100}%`;
         document.getElementById('prize-pool').textContent = `${state.prizePool} SOL`;
         document.getElementById('total-distributed').textContent = state.totalDistributed;
@@ -619,27 +624,22 @@ class GameRenderer {
         const updateCountdowns = () => {
             const now = new Date();
 
-            // UTC offsets for each timezone (in hours)
+            // ISO Time strings for strict accuracy
             const timezones = [
-                { name: 'NYC', offset: -5, emoji: '🗽' },
-                { name: 'LA', offset: -8, emoji: '🌴' },
-                { name: 'London', offset: 0, emoji: '🇬🇧' },
-                { name: 'Dubai', offset: 4, emoji: '🇦🇪' },
-                { name: 'Tokyo', offset: 9, emoji: '🇯🇵' },
-                { name: 'Sydney', offset: 11, emoji: '🇦🇺' }
+                { name: 'NYC', time: '2025-01-01T00:00:00-05:00', emoji: '🗽' },
+                { name: 'LA', time: '2025-01-01T00:00:00-08:00', emoji: '🌴' },
+                { name: 'London', time: '2025-01-01T00:00:00+00:00', emoji: '🇬🇧' },
+                { name: 'Dubai', time: '2025-01-01T00:00:00+04:00', emoji: '🇦🇪' },
+                { name: 'Tokyo', time: '2025-01-01T00:00:00+09:00', emoji: '🇯🇵' },
+                { name: 'Sydney', time: '2025-01-01T00:00:00+11:00', emoji: '🇦🇺' }
             ];
 
             const container = document.getElementById('ny-countdowns');
             if (!container) return;
 
             container.innerHTML = timezones.map(tz => {
-                // Midnight Jan 1 2025 in a timezone with offset X hours from UTC
-                // happens X hours BEFORE midnight UTC (for positive offsets)
-                // Example: Tokyo (UTC+9) hits midnight 9 hours before UTC midnight
-                const newYear2025UTC = Date.UTC(2025, 0, 1, 0, 0, 0);
-                const newYearInLocalTZ = newYear2025UTC - (tz.offset * 60 * 60 * 1000);
-
-                const diff = newYearInLocalTZ - now.getTime();
+                const targetTime = new Date(tz.time).getTime();
+                const diff = targetTime - now.getTime();
 
                 if (diff <= 0) {
                     return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2025!</span></div>`;

@@ -315,17 +315,14 @@ function endRound(winner) {
 
     console.log(`🏆 Round #${gameState.currentRound} winner: ${winner.wallet} (${Math.floor(winner.heightReached)}m)`);
 
+    gameState.timeRemaining = 30; // Start 30s break countdown
+
+    // Broadcast immediately so client sees "ended" state logic
     io.emit('roundEnded', {
         winner: gameState.winner,
         prizePool: gameState.prizePool,
         round: gameState.currentRound
     });
-
-    // 30 second break before next round
-    setTimeout(() => {
-        gameState.currentRound++;
-        startNewRound();
-    }, 30000);
 }
 
 function getGameStateForClient() {
@@ -353,24 +350,38 @@ setInterval(() => {
 
 // Broadcast state (30 FPS)
 setInterval(() => {
-    if (gameState.phase === 'racing' || gameState.phase === 'celebrating') {
+    if (gameState.phase === 'racing' || gameState.phase === 'celebrating' || gameState.phase === 'ended') {
         io.emit('gameState', getGameStateForClient());
     }
 }, 1000 / 30);
 
 // Timer countdown
 setInterval(() => {
+    // RACING PHASE
     if (gameState.phase === 'racing' && gameState.timeRemaining > 0) {
         gameState.timeRemaining--;
 
         if (gameState.timeRemaining === 0) {
             const active = gameState.fireworks.filter(fw => !fw.hasExploded);
-            active.forEach(fw => fw.explode());
-
-            const winner = gameState.fireworks.reduce((max, fw) =>
-                fw.heightReached > max.heightReached ? fw : max
-            );
-            startCelebration(winner);
+            if (active.length > 0) {
+                const winner = gameState.fireworks.reduce((max, fw) =>
+                    fw.heightReached > max.heightReached ? fw : max
+                );
+                startCelebration(winner);
+            } else {
+                // Technically impossible if loop is right, but fallback
+                startNewRound();
+            }
+        }
+    }
+    // BREAK PHASE (Intermission)
+    else if (gameState.phase === 'ended') {
+        if (gameState.timeRemaining > 0) {
+            gameState.timeRemaining--;
+        } else {
+            // Break is over
+            gameState.currentRound++;
+            startNewRound();
         }
     }
 }, 1000);
