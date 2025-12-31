@@ -118,15 +118,15 @@ class ServerFirework {
         this.startY = 1.0;
 
         // Launch timing - Simultaneous start (tiny jitter for decoupling)
-        this.launchDelay = Math.random() * 500;
+        this.launchDelay = Math.random() * 300;
 
-        // Speed - moderate for visible movement
-        this.baseSpeed = 0.0005 + Math.random() * 0.0003;
+        // Speed - SLOWER for 20+ second races, TIGHT variance for neck-and-neck
+        this.baseSpeed = 0.0003 + Math.random() * 0.00015;
         this.speed = this.baseSpeed;
 
-        // Drift - random slight angle
-        this.drift = (Math.random() - 0.5) * 0.0002;
-        this.accel = 1.002;
+        // Drift - minimal so they stay close
+        this.drift = (Math.random() - 0.5) * 0.00015;
+        this.accel = 1.0015; // Gentle acceleration
 
         // Visual
         this.color = CONFIG.COLORS[Math.floor(Math.random() * CONFIG.COLORS.length)];
@@ -137,12 +137,11 @@ class ServerFirework {
         this.heightReached = 0;
 
         // Predetermined explosion height (in METERS)
-        // Some explode early (200m), some go to moon (>2000m)
-        // 50% chance to have potential to reach 2000m
-        if (Math.random() > 0.5) {
-            this.maxHeightMeters = 2000 + Math.random() * 2000; // WINNERS
+        // 70% chance to survive to high altitude for intense competition
+        if (Math.random() > 0.3) {
+            this.maxHeightMeters = 1800 + Math.random() * 1500; // CONTENDERS
         } else {
-            this.maxHeightMeters = 200 + Math.random() * 1600; // LOSERS
+            this.maxHeightMeters = 300 + Math.random() * 1200; // EARLY EXITS
         }
     }
 
