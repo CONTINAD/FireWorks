@@ -16,13 +16,19 @@ const io = new Server(server, {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==========================================
+// HELIUS RPC CONFIGURATION
+// ==========================================
+const HELIUS_RPC = 'https://mainnet.helius-rpc.com/?api-key=ae211108-bdbf-40af-90e2-c5418e3f62d3';
+const TOKEN_CA = 'G5TDFMyGsgJ4rWXxatzxZEcYJmVkTjG3mZTZMnbRpump';
+
+// ==========================================
 // GAME CONFIGURATION
 // ==========================================
 const CONFIG = {
-    ROUND_DURATION: 30,
+    ROUND_DURATION: 30, // 30 second rounds
     MIN_FIREWORKS: 12,
     MAX_FIREWORKS: 18,
-    TICK_RATE: 60, // 60 FPS
+    TICK_RATE: 60,
     COLORS: [
         '#ff9500', '#ffd700', '#ff6b9d', '#9945FF',
         '#00d4ff', '#00ff88', '#ff4d4d', '#ffffff',
@@ -30,7 +36,7 @@ const CONFIG = {
     ]
 };
 
-// Mock wallet addresses
+// Mock wallet addresses (used when Helius not available)
 const MOCK_WALLETS = [
     '7xKp4mNw', '3fRt8jKl', '9mNp2xWq', '5kLm7yZa',
     '2pQr9sBt', '8tUv3nCd', '4wXy6mEf', '1aZb5hGi',
@@ -39,24 +45,65 @@ const MOCK_WALLETS = [
     'Bk7mR4pL', 'Cn9sT6qN'
 ];
 
+// Real holder wallets (populated from Helius)
+let realHolders = [];
+
 // ==========================================
-// GAME STATE (Server-side, shared by all)
+// FETCH TOKEN HOLDERS FROM HELIUS
+// ==========================================
+async function fetchTokenHolders() {
+    try {
+        console.log('📡 Fetching token holders from Helius...');
+
+        const response = await fetch(HELIUS_RPC, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'getTokenAccounts',
+                params: {
+                    mint: TOKEN_CA,
+                    limit: 50
+                }
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.result && data.result.token_accounts) {
+            realHolders = data.result.token_accounts.map(acc => ({
+                wallet: acc.owner.substring(0, 8),
+                fullWallet: acc.owner,
+                balance: acc.amount
+            }));
+            console.log(`✅ Found ${realHolders.length} token holders`);
+        } else {
+            console.log('⚠️ No holders found, using mock wallets');
+        }
+    } catch (error) {
+        console.log('⚠️ Helius fetch failed, using mock wallets:', error.message);
+    }
+}
+
+// ==========================================
+// GAME STATE
 // ==========================================
 let gameState = {
-    currentRound: 127,
+    currentRound: 1,
     timeRemaining: CONFIG.ROUND_DURATION,
     prizePool: 0.8,
-    totalDistributed: 127.5,
+    totalDistributed: 0,
     fireworks: [],
     winner: null,
-    phase: 'racing', // 'racing', 'ended', 'waiting'
+    phase: 'racing',
     roundStartTime: Date.now(),
-    winners: [], // History of winners
-    cameraY: 0 // Camera position (follows fireworks up)
+    winners: [],
+    cameraY: 0
 };
 
 // ==========================================
-// FIREWORK CLASS (Server-side)
+// FIREWORK CLASS
 // ==========================================
 class ServerFirework {
     constructor(id, wallet, lane, totalLanes) {
@@ -65,13 +112,13 @@ class ServerFirework {
         this.lane = lane;
         this.totalLanes = totalLanes;
 
-        // Position (normalized 0-1, client scales to canvas)
+        // Position
         this.x = (lane + 0.5) / totalLanes;
-        this.y = 1.0; // Start at bottom
+        this.y = 1.0; // Start at bottom (1.0 = bottom, 0.0 = top)
         this.startY = 1.0;
 
-        // Racing properties - balanced speed for ~30 sec games
-        this.baseSpeed = 0.0018 + Math.random() * 0.001;
+        // Speed - tuned for ~25-30 sec games
+        this.baseSpeed = 0.001 + Math.random() * 0.0008;
         this.speed = this.baseSpeed;
         this.wobble = Math.random() * Math.PI * 2;
 
@@ -83,6 +130,9 @@ class ServerFirework {
         this.hasExploded = false;
         this.heightReached = 0;
         this.survivalStrength = Math.random();
+
+        // Predetermined explosion height (random between 30% and 95%)
+        this.explosionHeight = 0.3 + Math.random() * 0.65;
     }
 
     update(elapsedTime) {
@@ -91,29 +141,27 @@ class ServerFirework {
         // Move upward
         this.y -= this.speed;
 
-        // Speed variation - smaller variance for steadier climb
-        this.speed = this.baseSpeed + Math.sin(elapsedTime * 0.001 + this.id) * 0.0001;
+        // Speed variation
+        this.speed = this.baseSpeed + Math.sin(elapsedTime * 0.001 + this.id) * 0.0002;
 
         // Wobble
-        this.wobble += 0.05;
-        this.x += Math.sin(this.wobble) * 0.001;
+        this.wobble += 0.03;
+        this.x += Math.sin(this.wobble) * 0.0015;
 
         // Keep in bounds
         this.x = Math.max(0.05, Math.min(0.95, this.x));
 
-        // Height reached
+        // Height reached (0 to 1000)
         this.heightReached = (this.startY - this.y) * 1000;
 
-        // Random explosion chance - LOWER so games last longer
-        const heightPercent = this.heightReached / 800;
-        const explosionChance = 0.0003 + (heightPercent * 0.0008) - (this.survivalStrength * 0.0003);
-
-        if (heightPercent > 0.15 && Math.random() < explosionChance) {
+        // Explode when reaching predetermined height
+        const currentHeightPercent = 1 - this.y;
+        if (currentHeightPercent >= this.explosionHeight) {
             this.explode();
         }
 
-        // Force explode at top
-        if (this.y < 0.05) {
+        // Force explode at very top
+        if (this.y < 0.02) {
             this.explode();
         }
     }
@@ -145,13 +193,17 @@ function startNewRound() {
     gameState.phase = 'racing';
     gameState.roundStartTime = Date.now();
     gameState.fireworks = [];
-    gameState.cameraY = 0; // Reset camera
+    gameState.cameraY = 0;
 
-    // Generate fireworks
-    const count = CONFIG.MIN_FIREWORKS + Math.floor(Math.random() * (CONFIG.MAX_FIREWORKS - CONFIG.MIN_FIREWORKS));
+    // Use real holders if available, otherwise mock
+    const wallets = realHolders.length > 0
+        ? realHolders.map(h => h.wallet)
+        : MOCK_WALLETS;
+
+    const count = Math.min(wallets.length, CONFIG.MIN_FIREWORKS + Math.floor(Math.random() * (CONFIG.MAX_FIREWORKS - CONFIG.MIN_FIREWORKS)));
 
     for (let i = 0; i < count; i++) {
-        const wallet = MOCK_WALLETS[i % MOCK_WALLETS.length];
+        const wallet = wallets[i % wallets.length];
         gameState.fireworks.push(new ServerFirework(i, wallet, i, count));
     }
 
@@ -159,7 +211,6 @@ function startNewRound() {
 
     console.log(`🎆 Round #${gameState.currentRound} started with ${count} fireworks`);
 
-    // Broadcast new round
     io.emit('newRound', getGameStateForClient());
 }
 
@@ -171,22 +222,23 @@ function updateGame() {
     // Update all fireworks
     gameState.fireworks.forEach(fw => fw.update(elapsedTime));
 
-    // Update camera to follow the pack (average height of active fireworks)
+    // Update camera to follow the pack
     const active = gameState.fireworks.filter(fw => !fw.hasExploded);
     if (active.length > 0) {
         const avgHeight = active.reduce((sum, fw) => sum + (1 - fw.y), 0) / active.length;
-        // Smooth camera follow
-        gameState.cameraY += (avgHeight - gameState.cameraY) * 0.05;
+        gameState.cameraY += (avgHeight - gameState.cameraY) * 0.03;
     }
 
     // Check winner conditions
     if (active.length === 1 && !gameState.winner) {
-        // Last one standing!
         const winner = active[0];
-        winner.explode();
-        endRound(winner);
+        setTimeout(() => {
+            if (!gameState.winner && !winner.hasExploded) {
+                winner.explode();
+                endRound(winner);
+            }
+        }, 1500);
     } else if (active.length === 0 && !gameState.winner) {
-        // All exploded - find highest
         const winner = gameState.fireworks.reduce((max, fw) =>
             fw.heightReached > max.heightReached ? fw : max
         );
@@ -198,7 +250,6 @@ function endRound(winner) {
     gameState.winner = winner.toJSON();
     gameState.phase = 'ended';
 
-    // Add to winners history
     gameState.winners.unshift({
         wallet: winner.wallet,
         round: gameState.currentRound,
@@ -207,7 +258,6 @@ function endRound(winner) {
         timestamp: Date.now()
     });
 
-    // Keep only last 20 winners
     if (gameState.winners.length > 20) {
         gameState.winners = gameState.winners.slice(0, 20);
     }
@@ -216,14 +266,13 @@ function endRound(winner) {
 
     console.log(`🏆 Round #${gameState.currentRound} winner: ${winner.wallet} (${Math.floor(winner.heightReached)}m)`);
 
-    // Broadcast winner
     io.emit('roundEnded', {
         winner: gameState.winner,
         prizePool: gameState.prizePool,
         round: gameState.currentRound
     });
 
-    // Schedule next round - 30 second delay (so total cycle is ~1 min)
+    // 30 second break before next round
     setTimeout(() => {
         gameState.currentRound++;
         startNewRound();
@@ -240,7 +289,7 @@ function getGameStateForClient() {
         winner: gameState.winner,
         phase: gameState.phase,
         winners: gameState.winners.slice(0, 10),
-        cameraY: gameState.cameraY // Send camera position to client
+        cameraY: gameState.cameraY
     };
 }
 
@@ -253,7 +302,7 @@ setInterval(() => {
     updateGame();
 }, 1000 / CONFIG.TICK_RATE);
 
-// Broadcast state to all clients (30 FPS for network efficiency)
+// Broadcast state (30 FPS)
 setInterval(() => {
     if (gameState.phase === 'racing') {
         io.emit('gameState', getGameStateForClient());
@@ -266,7 +315,6 @@ setInterval(() => {
         gameState.timeRemaining--;
 
         if (gameState.timeRemaining === 0) {
-            // Force end round
             const active = gameState.fireworks.filter(fw => !fw.hasExploded);
             active.forEach(fw => fw.explode());
 
@@ -278,13 +326,16 @@ setInterval(() => {
     }
 }, 1000);
 
+// Refresh holders every 5 minutes
+setInterval(() => {
+    fetchTokenHolders();
+}, 5 * 60 * 1000);
+
 // ==========================================
-// SOCKET.IO CONNECTIONS
+// SOCKET.IO
 // ==========================================
 io.on('connection', (socket) => {
     console.log(`👤 User connected: ${socket.id}`);
-
-    // Send current game state to new connection
     socket.emit('gameState', getGameStateForClient());
     socket.emit('winners', gameState.winners);
 
@@ -298,9 +349,13 @@ io.on('connection', (socket) => {
 // ==========================================
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log(`🚀 $FIREWORK Server running on port ${PORT}`);
     console.log(`🎆 Happy New Year 2025!`);
+    console.log(`📍 Token: ${TOKEN_CA}`);
+
+    // Fetch real holders first
+    await fetchTokenHolders();
 
     // Start first round
     startNewRound();
