@@ -514,8 +514,8 @@ class GameRenderer {
             this.focusY = height / 2;
         }
 
-        // Clear with fade (Screen Space)
-        ctx.fillStyle = 'rgba(5, 5, 16, 0.15)';
+        // Full clear - no ghosting/shadows
+        ctx.fillStyle = 'rgb(5, 5, 16)';
         ctx.fillRect(0, 0, width, height);
 
         // --- CAMERA LOGIC ---
