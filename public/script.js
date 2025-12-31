@@ -116,11 +116,9 @@ class ClientFirework {
         const prevY = this.y;
 
         this.x = newData.x * canvasWidth;
-        // Camera follows slower at start, faster towards end (more scroll)
-        // Multiplier: 0.4 at start -> 0.9 at high altitude
+        // Simple camera follow - rockets climb visually
         const rawY = newData.y * canvasHeight;
-        const dynamicMultiplier = 0.4 + Math.min(cameraY * 0.25, 0.5);
-        this.y = rawY + (cameraY * canvasHeight * dynamicMultiplier);
+        this.y = rawY + (cameraY * canvasHeight * 0.6);
         this.heightReached = newData.heightReached;
 
         // Check if just exploded
