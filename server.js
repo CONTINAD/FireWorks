@@ -238,7 +238,7 @@ function updateGame() {
                 endRound(winner);
             }
         }, 1500);
-    } else if (active.length === 0 && !gameState.winner) {
+    } else if (active.length === 0 && !gameState.winner && gameState.fireworks.length > 0) {
         const winner = gameState.fireworks.reduce((max, fw) =>
             fw.heightReached > max.heightReached ? fw : max
         );
