@@ -12,7 +12,7 @@ const socket = io();
 // CONFIGURATION
 // ==========================================
 const CONFIG = {
-    PARTICLE_COUNT: 50,
+    PARTICLE_COUNT: 30,
     GRAVITY: 0.025,
     FRICTION: 0.98
 };

@@ -117,12 +117,17 @@ class ServerFirework {
         this.y = 1.0; // Start at bottom (1.0 = bottom, 0.0 = top)
         this.startY = 1.0;
 
-        // Speed - slower for longer games (~45 sec)
-        this.baseSpeed = 0.0006 + Math.random() * 0.0004;
+        // Launch timing - Stagger launches over first 8 seconds
+        // This prevents the "all exploding at once" issue
+        this.launchDelay = Math.random() * 8000;
+
+        // Speed - Slower overall for 30s game
+        this.baseSpeed = 0.0003 + Math.random() * 0.0005;
         this.speed = this.baseSpeed;
-        // Drift - random slight angle, no wobble
-        this.drift = (Math.random() - 0.5) * 0.0005;
-        this.accel = 1.01; // Slight acceleration
+
+        // Drift - random slight angle
+        this.drift = (Math.random() - 0.5) * 0.0003;
+        this.accel = 1.005; // Gentler acceleration
 
         // Visual
         this.color = CONFIG.COLORS[Math.floor(Math.random() * CONFIG.COLORS.length)];
@@ -133,12 +138,16 @@ class ServerFirework {
         this.heightReached = 0;
         this.survivalStrength = Math.random();
 
-        // Predetermined explosion height (random between 30% and 95%)
-        this.explosionHeight = 0.3 + Math.random() * 0.65;
+        // Predetermined explosion height (random between 20% and 98%)
+        // Widen the gap so some die early, some go high
+        this.explosionHeight = 0.2 + Math.random() * 0.78;
     }
 
     update(elapsedTime) {
         if (this.hasExploded) return;
+
+        // Wait for launch delay
+        if (elapsedTime < this.launchDelay) return;
 
         // Move upward with slight acceleration
         this.y -= this.speed;
