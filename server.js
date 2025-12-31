@@ -120,14 +120,14 @@ class ServerFirework {
         // Launch timing - Simultaneous start (tiny jitter for decoupling)
         this.launchDelay = Math.random() * 500;
 
-        // Speed - Adjusted for 2000m race (approx 45-60s)
-        // Need to cover 2.0 units (1.0 to -1.0)
-        this.baseSpeed = 0.0004 + Math.random() * 0.0003;
+        // Speed - FASTER for more visual movement
+        // Covers 2000m in ~30-40 seconds
+        this.baseSpeed = 0.0007 + Math.random() * 0.0004;
         this.speed = this.baseSpeed;
 
         // Drift - random slight angle
         this.drift = (Math.random() - 0.5) * 0.0003;
-        this.accel = 1.002; // Steady acceleration
+        this.accel = 1.003; // Stronger acceleration
 
         // Visual
         this.color = CONFIG.COLORS[Math.floor(Math.random() * CONFIG.COLORS.length)];
