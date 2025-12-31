@@ -616,10 +616,8 @@ class GameRenderer {
     startNewYearCountdowns() {
         const updateCountdowns = () => {
             const now = new Date();
-            // HARDCODED: New Year 2025 countdown for everyone
-            const targetYear = 2025;
 
-            // ISO Time strings for strict accuracy
+            // ISO Time strings for 2025 New Year
             const timezones = [
                 { name: 'NYC', time: '2025-01-01T00:00:00-05:00', emoji: '🗽' },
                 { name: 'LA', time: '2025-01-01T00:00:00-08:00', emoji: '🌴' },
@@ -634,8 +632,15 @@ class GameRenderer {
 
             container.innerHTML = timezones.map(tz => {
                 const targetTime = new Date(tz.time).getTime();
-                const diff = targetTime - now.getTime();
+                let diff = targetTime - now.getTime();
 
+                // If diff is negative by MORE than 1 day, user's clock is probably wrong (set to 2025)
+                // Just show celebration
+                if (diff < -86400000) {
+                    return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2025!</span></div>`;
+                }
+
+                // Normal countdown
                 if (diff <= 0) {
                     return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2025!</span></div>`;
                 }
