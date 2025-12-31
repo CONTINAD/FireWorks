@@ -595,12 +595,13 @@ class GameRenderer {
             if (!container) return;
 
             container.innerHTML = timezones.map(tz => {
-                // New Year 2025 midnight in UTC for this timezone
-                // Jan 1 2025 00:00 in timezone = Jan 1 2025 00:00 UTC - offset hours
+                // Midnight Jan 1 2025 in a timezone with offset X hours from UTC
+                // happens X hours BEFORE midnight UTC (for positive offsets)
+                // Example: Tokyo (UTC+9) hits midnight 9 hours before UTC midnight
                 const newYear2025UTC = Date.UTC(2025, 0, 1, 0, 0, 0);
-                const newYearInTZ = newYear2025UTC - (tz.offset * 60 * 60 * 1000);
+                const newYearInLocalTZ = newYear2025UTC - (tz.offset * 60 * 60 * 1000);
 
-                const diff = newYearInTZ - now.getTime();
+                const diff = newYearInLocalTZ - now.getTime();
 
                 if (diff <= 0) {
                     return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2025!</span></div>`;
