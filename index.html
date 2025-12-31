@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$FIREWORK - New Year Firework Battle Game | Solana</title>
+    <meta name="description" content="$FIREWORK - The ultimate New Year battle game on Solana. Each holder is a firework. Last to explode wins the prize pool!">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Background Fireworks Canvas -->
+    <canvas id="bg-fireworks"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-icon">🎆</span>
+                <span class="logo-text">$FIREWORK</span>
+            </div>
+            <div class="nav-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#game">Play</a>
+                <a href="#winners">Winners</a>
+                <a href="#tokenomics">Supply</a>
+            </div>
+            <div class="nav-actions">
+                <a href="https://pump.fun" target="_blank" class="btn-pumpfun">
+                    <img src="https://pump.fun/icon.png" alt="PumpFun" class="pumpfun-icon">
+                    Buy on Pump.fun
+                </a>
+            </div>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#game">Play</a>
+        <a href="#winners">Winners</a>
+        <a href="#tokenomics">Supply</a>
+        <a href="https://pump.fun" target="_blank" class="btn-pumpfun-mobile">Buy on Pump.fun</a>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-icon">🎇</span>
+                <span>New Year 2025 Launch</span>
+            </div>
+            <h1 class="hero-title">
+                <span class="title-line">Light Up The</span>
+                <span class="title-highlight">$FIREWORK</span>
+                <span class="title-line">Battle</span>
+            </h1>
+            <p class="hero-subtitle">
+                Every holder is a firework. Every minute is a battle.<br>
+                <strong>Last to explode wins the entire prize pool.</strong>
+            </p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-value" id="total-distributed">127.5</span>
+                    <span class="stat-label">SOL Distributed</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-value" id="total-rounds">127</span>
+                    <span class="stat-label">Rounds Played</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-value" id="total-holders">1,247</span>
+                    <span class="stat-label">Holders Playing</span>
+                </div>
+            </div>
+            <div class="hero-cta">
+                <a href="#game" class="btn-primary">
+                    <span class="btn-icon">🚀</span>
+                    Watch Live Game
+                </a>
+                <a href="https://pump.fun" target="_blank" class="btn-secondary">
+                    <span class="btn-icon">💎</span>
+                    Buy $FIREWORK
+                </a>
+            </div>
+            <div class="hero-chains">
+                <span>Powered by</span>
+                <img src="https://cryptologos.cc/logos/solana-sol-logo.svg" alt="Solana" class="chain-logo">
+                <span class="chain-divider">×</span>
+                <img src="https://pump.fun/icon.png" alt="PumpFun" class="chain-logo pumpfun">
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="countdown-ring">
+                <div class="ring-content">
+                    <span class="countdown-label">Next Round In</span>
+                    <span class="countdown-time" id="hero-countdown">0:42</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="section-container">
+            <div class="section-header">
+                <span class="section-badge">The Game</span>
+                <h2 class="section-title">How $FIREWORK Works</h2>
+                <p class="section-subtitle">A revolutionary game where your tokens fight for glory every 60 seconds</p>
+            </div>
+            
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <div class="step-icon">🎆</div>
+                    <h3>Hold $FIREWORK</h3>
+                    <p>Buy and hold $FIREWORK tokens. Each holder automatically becomes a firework in the battle arena.</p>
+                </div>
+                
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <div class="step-icon">🚀</div>
+                    <h3>Launch Every Round</h3>
+                    <p>Every 60 seconds, all holder fireworks launch from the ground and begin their ascent into the sky.</p>
+                </div>
+                
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <div class="step-icon">💥</div>
+                    <h3>Random Explosions</h3>
+                    <p>As fireworks rise, they randomly explode at different heights. Higher isn't always better—it's about survival.</p>
+                </div>
+                
+                <div class="step-card featured">
+                    <div class="step-number">04</div>
+                    <div class="step-icon">🏆</div>
+                    <h3>Winner Takes All</h3>
+                    <p>The last firework to explode wins the entire dev/creator fee pool for that round. Every single minute.</p>
+                </div>
+            </div>
+
+            <div class="benefit-banner">
+                <div class="benefit-icon">💰</div>
+                <div class="benefit-content">
+                    <h3>Holder Benefits</h3>
+                    <p>Simply by holding $FIREWORK, you're automatically entered into every round. More tokens = more chances to be the last firework standing. All dev fees go directly to winners—no team takes a cut.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Game Arena Section -->
+    <section class="game-section" id="game">
+        <div class="section-container">
+            <div class="section-header">
+                <span class="section-badge live-badge">
+                    <span class="live-dot"></span>
+                    LIVE
+                </span>
+                <h2 class="section-title">Battle Arena</h2>
+            </div>
+
+            <div class="game-wrapper">
+                <!-- Game Stats Panel -->
+                <div class="game-stats-panel">
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-info">
+                            <span class="stat-title">Round</span>
+                            <span class="stat-number" id="current-round">#127</span>
+                        </div>
+                    </div>
+                    <div class="stat-card timer-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-info">
+                            <span class="stat-title">Time Left</span>
+                            <span class="stat-number countdown" id="game-timer">0:42</span>
+                        </div>
+                        <div class="timer-bar">
+                            <div class="timer-progress" id="timer-progress"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎆</div>
+                        <div class="stat-info">
+                            <span class="stat-title">Active</span>
+                            <span class="stat-number"><span id="active-fireworks">23</span> / 100</span>
+                        </div>
+                    </div>
+                    <div class="stat-card prize-card">
+                        <div class="stat-icon">💎</div>
+                        <div class="stat-info">
+                            <span class="stat-title">Prize Pool</span>
+                            <span class="stat-number prize" id="prize-pool">0.8 SOL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Canvas -->
+                <div class="game-arena">
+                    <canvas id="game-canvas"></canvas>
+                    <div class="game-overlay" id="game-overlay">
+                        <div class="winner-announcement" id="winner-announcement">
+                            <span class="winner-icon">🏆</span>
+                            <h3>WINNER!</h3>
+                            <p class="winner-wallet" id="winner-wallet">7xKp...4mNw</p>
+                            <p class="winner-prize">Won <span id="winner-prize">0.8 SOL</span></p>
+                        </div>
+                    </div>
+                    <div class="launch-pad">
+                        <div class="pad-glow"></div>
+                        <span>LAUNCH PAD</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dev Supply Section -->
+    <section class="tokenomics-section" id="tokenomics">
+        <div class="section-container">
+            <div class="section-header">
+                <span class="section-badge">Transparency</span>
+                <h2 class="section-title">Live Dev Supply</h2>
+                <p class="section-subtitle">100% transparent. All dev fees go to winners.</p>
+            </div>
+
+            <div class="supply-grid">
+                <div class="supply-card main-supply">
+                    <div class="supply-header">
+                        <span class="supply-icon">🔥</span>
+                        <span class="supply-label">Current Dev Supply</span>
+                    </div>
+                    <div class="supply-value" id="dev-supply">2.45 SOL</div>
+                    <div class="supply-subtext">Available for next winner</div>
+                    <div class="supply-live">
+                        <span class="live-indicator"></span>
+                        Updated in real-time
+                    </div>
+                </div>
+
+                <div class="supply-card">
+                    <div class="supply-header">
+                        <span class="supply-icon">📊</span>
+                        <span class="supply-label">Creator Fee Rate</span>
+                    </div>
+                    <div class="supply-value">1%</div>
+                    <div class="supply-subtext">Per transaction</div>
+                </div>
+
+                <div class="supply-card">
+                    <div class="supply-header">
+                        <span class="supply-icon">🎁</span>
+                        <span class="supply-label">Total Given Away</span>
+                    </div>
+                    <div class="supply-value" id="total-given">127.5 SOL</div>
+                    <div class="supply-subtext">To winners</div>
+                </div>
+
+                <div class="supply-card">
+                    <div class="supply-header">
+                        <span class="supply-icon">⚡</span>
+                        <span class="supply-label">Avg Prize/Round</span>
+                    </div>
+                    <div class="supply-value" id="avg-prize">1.0 SOL</div>
+                    <div class="supply-subtext">Per minute</div>
+                </div>
+            </div>
+
+            <div class="contract-info">
+                <span class="contract-label">Contract Address:</span>
+                <div class="contract-address">
+                    <code id="contract-address">Coming Soon on Pump.fun</code>
+                    <button class="copy-btn" id="copy-ca">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Winners Section -->
+    <section class="winners-section" id="winners">
+        <div class="section-container">
+            <div class="section-header">
+                <span class="section-badge">Leaderboard</span>
+                <h2 class="section-title">Previous Winners</h2>
+                <p class="section-subtitle">Verified on-chain. Every win is transparent.</p>
+            </div>
+
+            <div class="winners-table-wrapper">
+                <table class="winners-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Wallet</th>
+                            <th>Round</th>
+                            <th>Prize</th>
+                            <th>Time</th>
+                            <th>Verify</th>
+                        </tr>
+                    </thead>
+                    <tbody id="winners-list">
+                        <tr class="winner-row gold">
+                            <td><span class="rank-badge">🥇</span></td>
+                            <td class="wallet-cell">
+                                <span class="wallet-address">7xKp...4mNw</span>
+                            </td>
+                            <td>#126</td>
+                            <td class="prize-cell">0.82 SOL</td>
+                            <td>2 min ago</td>
+                            <td>
+                                <a href="https://solscan.io/tx/example1" target="_blank" class="verify-link">
+                                    Solscan ↗
+                                </a>
+                            </td>
+                        </tr>
+                        <tr class="winner-row silver">
+                            <td><span class="rank-badge">🥈</span></td>
+                            <td class="wallet-cell">
+                                <span class="wallet-address">3fRt...8jKl</span>
+                            </td>
+                            <td>#125</td>
+                            <td class="prize-cell">0.65 SOL</td>
+                            <td>3 min ago</td>
+                            <td>
+                                <a href="https://solscan.io/tx/example2" target="_blank" class="verify-link">
+                                    Solscan ↗
+                                </a>
+                            </td>
+                        </tr>
+                        <tr class="winner-row bronze">
+                            <td><span class="rank-badge">🥉</span></td>
+                            <td class="wallet-cell">
+                                <span class="wallet-address">9mNp...2xWq</span>
+                            </td>
+                            <td>#124</td>
+                            <td class="prize-cell">0.91 SOL</td>
+                            <td>4 min ago</td>
+                            <td>
+                                <a href="https://solscan.io/tx/example3" target="_blank" class="verify-link">
+                                    Solscan ↗
+                                </a>
+                            </td>
+                        </tr>
+                        <tr class="winner-row">
+                            <td><span class="rank-badge">4</span></td>
+                            <td class="wallet-cell">
+                                <span class="wallet-address">5kLm...7yZa</span>
+                            </td>
+                            <td>#123</td>
+                            <td class="prize-cell">0.73 SOL</td>
+                            <td>5 min ago</td>
+                            <td>
+                                <a href="https://solscan.io/tx/example4" target="_blank" class="verify-link">
+                                    Solscan ↗
+                                </a>
+                            </td>
+                        </tr>
+                        <tr class="winner-row">
+                            <td><span class="rank-badge">5</span></td>
+                            <td class="wallet-cell">
+                                <span class="wallet-address">2pQr...9sBt</span>
+                            </td>
+                            <td>#122</td>
+                            <td class="prize-cell">1.12 SOL</td>
+                            <td>6 min ago</td>
+                            <td>
+                                <a href="https://solscan.io/tx/example5" target="_blank" class="verify-link">
+                                    Solscan ↗
+                                </a>
+                            </td>
+                        </tr>
+                        <tr class="winner-row">
+                            <td><span class="rank-badge">6</span></td>
+                            <td class="wallet-cell">
+                                <span class="wallet-address">8tUv...3nCd</span>
+                            </td>
+                            <td>#121</td>
+                            <td class="prize-cell">0.58 SOL</td>
+                            <td>7 min ago</td>
+                            <td>
+                                <a href="https://solscan.io/tx/example6" target="_blank" class="verify-link">
+                                    Solscan ↗
+                                </a>
+                            </td>
+                        </tr>
+                        <tr class="winner-row">
+                            <td><span class="rank-badge">7</span></td>
+                            <td class="wallet-cell">
+                                <span class="wallet-address">4wXy...6mEf</span>
+                            </td>
+                            <td>#120</td>
+                            <td class="prize-cell">0.95 SOL</td>
+                            <td>8 min ago</td>
+                            <td>
+                                <a href="https://solscan.io/tx/example7" target="_blank" class="verify-link">
+                                    Solscan ↗
+                                </a>
+                            </td>
+                        </tr>
+                        <tr class="winner-row">
+                            <td><span class="rank-badge">8</span></td>
+                            <td class="wallet-cell">
+                                <span class="wallet-address">1aZb...5hGi</span>
+                            </td>
+                            <td>#119</td>
+                            <td class="prize-cell">0.67 SOL</td>
+                            <td>9 min ago</td>
+                            <td>
+                                <a href="https://solscan.io/tx/example8" target="_blank" class="verify-link">
+                                    Solscan ↗
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="winners-footer">
+                <p>All transactions verified on Solana blockchain via Solscan</p>
+                <img src="https://cryptologos.cc/logos/solana-sol-logo.svg" alt="Solana" class="solana-badge">
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-main">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <span class="logo-icon">🎆</span>
+                        <span class="logo-text">$FIREWORK</span>
+                    </div>
+                    <p class="footer-tagline">The New Year Battle Game on Solana</p>
+                </div>
+
+                <div class="footer-links-grid">
+                    <div class="footer-links-col">
+                        <h4>Quick Links</h4>
+                        <a href="#how-it-works">How It Works</a>
+                        <a href="#game">Live Game</a>
+                        <a href="#winners">Winners</a>
+                        <a href="#tokenomics">Tokenomics</a>
+                    </div>
+                    <div class="footer-links-col">
+                        <h4>Trade</h4>
+                        <a href="https://pump.fun" target="_blank">Pump.fun</a>
+                        <a href="https://raydium.io" target="_blank">Raydium</a>
+                        <a href="https://jup.ag" target="_blank">Jupiter</a>
+                    </div>
+                    <div class="footer-links-col">
+                        <h4>Community</h4>
+                        <a href="https://twitter.com" target="_blank">Twitter/X</a>
+                        <a href="https://t.me" target="_blank">Telegram</a>
+                        <a href="https://discord.gg" target="_blank">Discord</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div class="footer-powered">
+                    <span>Powered by</span>
+                    <div class="powered-logos">
+                        <img src="https://cryptologos.cc/logos/solana-sol-logo.svg" alt="Solana" class="powered-logo">
+                        <span class="powered-divider">×</span>
+                        <img src="https://pump.fun/icon.png" alt="PumpFun" class="powered-logo pumpfun-logo">
+                    </div>
+                </div>
+                <p class="footer-disclaimer">
+                    $FIREWORK is a meme coin with no intrinsic value. Trade responsibly. DYOR.
+                </p>
+                <p class="footer-copyright">
+                    © 2025 $FIREWORK. Happy New Year! 🎆
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
