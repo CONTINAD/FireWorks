@@ -116,11 +116,10 @@ class ClientFirework {
         const prevY = this.y;
 
         this.x = newData.x * canvasWidth;
-        // Camera offset formula: keeps leader at ~30% from top of screen
-        // As cameraY increases, rockets move DOWN on screen
-        // We offset by 0.7 * height so the tracked object sits at 30% from top
+        // Camera follows at 50% speed - so rockets visually CLIMB up the screen
+        // Lower multiplier = more visible upward movement
         const rawY = newData.y * canvasHeight;
-        this.y = rawY + (cameraY * canvasHeight) - (canvasHeight * 0.7);
+        this.y = rawY + (cameraY * canvasHeight * 0.5);
         this.heightReached = newData.heightReached;
 
         // Check if just exploded
@@ -546,6 +545,9 @@ class GameRenderer {
         ctx.translate(width / 2, height / 2);
         ctx.scale(this.renderZoom, this.renderZoom);
         ctx.translate(-this.focusX, -this.focusY);
+
+        // Stars for motion reference
+        this.drawStars();
 
         // Draw all fireworks
         this.clientFireworks.forEach(fw => fw.draw(ctx));
