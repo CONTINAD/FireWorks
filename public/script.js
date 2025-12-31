@@ -545,9 +545,6 @@ class GameRenderer {
         ctx.scale(this.renderZoom, this.renderZoom);
         ctx.translate(-this.focusX, -this.focusY);
 
-        // Stars for motion reference
-        this.drawStars();
-
         // Draw all fireworks
         this.clientFireworks.forEach(fw => fw.draw(ctx));
 
