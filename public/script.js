@@ -385,10 +385,13 @@ class GameRenderer {
             document.getElementById('game-timer').textContent = "WINNER!";
             document.getElementById('hero-countdown').textContent = "WINNER!";
         } else {
-            document.getElementById('game-timer').textContent = `0:${state.timeRemaining.toString().padStart(2, '0')}`;
-            document.getElementById('hero-countdown').textContent = `0:${state.timeRemaining.toString().padStart(2, '0')}`;
+            const minutes = Math.floor(state.timeRemaining / 60);
+            const seconds = state.timeRemaining % 60;
+            const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('game-timer').textContent = timeStr;
+            document.getElementById('hero-countdown').textContent = timeStr;
         }
-        document.getElementById('timer-progress').style.width = `${(state.timeRemaining / 30) * 100}%`;
+        document.getElementById('timer-progress').style.width = `${(state.timeRemaining / 120) * 100}%`;
         document.getElementById('prize-pool').textContent = `${state.prizePool} SOL`;
         document.getElementById('total-distributed').textContent = state.totalDistributed;
         document.getElementById('total-given').textContent = `${state.totalDistributed} SOL`;
