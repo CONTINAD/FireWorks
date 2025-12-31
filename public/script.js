@@ -499,13 +499,52 @@ class GameRenderer {
 
     drawGame() {
         const ctx = this.gameCtx;
+        const width = this.gameCanvas.width;
+        const height = this.gameCanvas.height;
 
-        // Clear with fade
+        // Init zoom if not set
+        if (!this.renderZoom) {
+            this.renderZoom = 1.0;
+            this.focusX = width / 2;
+            this.focusY = height / 2;
+        }
+
+        // Clear with fade (Screen Space)
         ctx.fillStyle = 'rgba(5, 5, 16, 0.15)';
-        ctx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+        ctx.fillRect(0, 0, width, height);
+
+        // --- CAMERA LOGIC ---
+        let targetZoom = 1.0;
+        let targetFocusX = width / 2;
+        let targetFocusY = height / 2;
+
+        if (clientState.phase === 'celebrating' && clientState.winner) {
+            targetZoom = 2.0; // Zoom in!
+            // Track winner
+            const winnerFw = this.clientFireworks.get(clientState.winner.id);
+            if (winnerFw) {
+                targetFocusX = winnerFw.x;
+                targetFocusY = winnerFw.y;
+            }
+        }
+
+        // Smooth Lerp
+        this.renderZoom += (targetZoom - this.renderZoom) * 0.05;
+        this.focusX += (targetFocusX - this.focusX) * 0.1;
+        this.focusY += (targetFocusY - this.focusY) * 0.1;
+
+        ctx.save();
+
+        // Apply Camera Transform: Scale around focus point
+        ctx.translate(width / 2, height / 2);
+        ctx.scale(this.renderZoom, this.renderZoom);
+        ctx.translate(-this.focusX, -this.focusY);
 
         // Height markers
         this.drawHeightMarkers();
+
+        // Stars (Background)
+        this.drawStars();
 
         // Draw all fireworks
         this.clientFireworks.forEach(fw => fw.draw(ctx));
@@ -513,8 +552,7 @@ class GameRenderer {
         // Leader indicator
         this.drawLeaderIndicator();
 
-        // Stars
-        this.drawStars();
+        ctx.restore();
     }
 
     drawHeightMarkers() {

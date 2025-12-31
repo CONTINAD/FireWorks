@@ -241,40 +241,58 @@ function startNewRound() {
 }
 
 function updateGame() {
-    if (gameState.phase !== 'racing') return;
+    if (gameState.phase !== 'racing' && gameState.phase !== 'celebrating') return;
 
     const elapsedTime = Date.now() - gameState.roundStartTime;
 
-    // Update all fireworks
-    gameState.fireworks.forEach(fw => fw.update(elapsedTime));
+    if (gameState.phase === 'racing') {
+        // Update all fireworks
+        gameState.fireworks.forEach(fw => fw.update(elapsedTime));
 
-    // Update camera to follow the LEADER (highest firework)
-    // This ensures the view moves up with the "final rockets"
-    const active = gameState.fireworks.filter(fw => !fw.hasExploded);
-    if (active.length > 0) {
-        // Find highest firework (lowest y value)
-        const minY = Math.min(...active.map(fw => fw.y));
-        const targetHeight = 1.0 - minY;
+        // Update camera to follow the LEADER (highest firework)
+        const active = gameState.fireworks.filter(fw => !fw.hasExploded);
 
-        // Smoothly follow the leader (faster lerp for responsiveness)
-        gameState.cameraY += (targetHeight - gameState.cameraY) * 0.05;
+        if (active.length > 0) {
+            const minY = Math.min(...active.map(fw => fw.y));
+            const targetHeight = 1.0 - minY;
+            gameState.cameraY += (targetHeight - gameState.cameraY) * 0.05;
+        }
+
+        // Win Condition: Only 1 survivor left (and others have died)
+        if (active.length === 1 && !gameState.winner && gameState.fireworks.length > 1) {
+            startCelebration(active[0]);
+        }
     }
-
-    // Check winner conditions
-    if (active.length === 1 && !gameState.winner) {
-        const winner = active[0];
-        setTimeout(() => {
-            if (!gameState.winner && !winner.hasExploded) {
-                winner.explode();
-                endRound(winner);
+    else if (gameState.phase === 'celebrating') {
+        // Update ONLY the winner
+        if (gameState.winner) {
+            const winnerFw = gameState.fireworks.find(fw => fw.id === gameState.winner.id);
+            if (winnerFw) {
+                winnerFw.update(elapsedTime);
+                // Tight camera lock on winner
+                const targetHeight = 1.0 - winnerFw.y;
+                gameState.cameraY += (targetHeight - gameState.cameraY) * 0.1;
             }
-        }, 1500);
-    } else if (active.length === 0 && !gameState.winner && gameState.fireworks.length > 0) {
-        const winner = gameState.fireworks.reduce((max, fw) =>
-            fw.heightReached > max.heightReached ? fw : max
-        );
-        endRound(winner);
+        }
     }
+}
+
+function startCelebration(winner) {
+    if (gameState.phase === 'celebrating') return;
+
+    console.log(`🎉 Celebration started for ${winner.wallet}`);
+    gameState.phase = 'celebrating';
+    gameState.winner = winner.toJSON(); // Mark winner early
+
+    // Explode everyone else
+    gameState.fireworks.forEach(fw => {
+        if (fw.id !== winner.id) fw.explode();
+    });
+
+    // 3 Seconds of Solo Flight/Zoom
+    setTimeout(() => {
+        endRound(winner);
+    }, 3000);
 }
 
 function endRound(winner) {
@@ -335,7 +353,7 @@ setInterval(() => {
 
 // Broadcast state (30 FPS)
 setInterval(() => {
-    if (gameState.phase === 'racing') {
+    if (gameState.phase === 'racing' || gameState.phase === 'celebrating') {
         io.emit('gameState', getGameStateForClient());
     }
 }, 1000 / 30);
@@ -352,7 +370,7 @@ setInterval(() => {
             const winner = gameState.fireworks.reduce((max, fw) =>
                 fw.heightReached > max.heightReached ? fw : max
             );
-            endRound(winner);
+            startCelebration(winner);
         }
     }
 }, 1000);
