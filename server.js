@@ -256,7 +256,7 @@ function updateGame() {
             // Camera tracks leader. 1.0 - y is normal height.
             // If y goes negative, camera goes > 1.0.
             const targetHeight = 1.0 - minY;
-            gameState.cameraY += (targetHeight - gameState.cameraY) * 0.05;
+            gameState.cameraY += (targetHeight - gameState.cameraY) * 0.12;
         }
 
         // Win Condition 1: FIRST TO 2000m (-1.0 y)
