@@ -616,18 +616,17 @@ class GameRenderer {
     startNewYearCountdowns() {
         const updateCountdowns = () => {
             const now = new Date();
-            // Dynamically target the NEXT year based on system time
-            // If system is 2025-12-31, we target 2026.
-            const nextYear = now.getFullYear() + 1;
+            // HARDCODED: New Year 2025 countdown for everyone
+            const targetYear = 2025;
 
             // ISO Time strings for strict accuracy
             const timezones = [
-                { name: 'NYC', time: `${nextYear}-01-01T00:00:00-05:00`, emoji: '🗽' },
-                { name: 'LA', time: `${nextYear}-01-01T00:00:00-08:00`, emoji: '🌴' },
-                { name: 'London', time: `${nextYear}-01-01T00:00:00+00:00`, emoji: '🇬🇧' },
-                { name: 'Dubai', time: `${nextYear}-01-01T00:00:00+04:00`, emoji: '🇦🇪' },
-                { name: 'Tokyo', time: `${nextYear}-01-01T00:00:00+09:00`, emoji: '🇯🇵' },
-                { name: 'Sydney', time: `${nextYear}-01-01T00:00:00+11:00`, emoji: '🇦🇺' }
+                { name: 'NYC', time: '2025-01-01T00:00:00-05:00', emoji: '🗽' },
+                { name: 'LA', time: '2025-01-01T00:00:00-08:00', emoji: '🌴' },
+                { name: 'London', time: '2025-01-01T00:00:00+00:00', emoji: '🇬🇧' },
+                { name: 'Dubai', time: '2025-01-01T00:00:00+04:00', emoji: '🇦🇪' },
+                { name: 'Tokyo', time: '2025-01-01T00:00:00+09:00', emoji: '🇯🇵' },
+                { name: 'Sydney', time: '2025-01-01T00:00:00+11:00', emoji: '🇦🇺' }
             ];
 
             const container = document.getElementById('ny-countdowns');
@@ -638,7 +637,7 @@ class GameRenderer {
                 const diff = targetTime - now.getTime();
 
                 if (diff <= 0) {
-                    return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 ${nextYear}!</span></div>`;
+                    return `<div class="countdown-item celebrated">${tz.emoji} <span class="tz-name">${tz.name}</span> <span class="celebrate">🎉 2025!</span></div>`;
                 }
 
                 const totalSecs = Math.floor(diff / 1000);
