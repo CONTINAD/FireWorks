@@ -28,7 +28,8 @@ let clientState = {
     timeRemaining: 30,
     prizePool: '0.00',
     totalDistributed: '0.0',
-    winners: []
+    winners: [],
+    lastReceivedRound: 0
 };
 
 // ==========================================
@@ -342,11 +343,17 @@ class GameRenderer {
 
     setupSocketListeners() {
         socket.on('gameState', (state) => {
+            // If round changed, clear old fireworks first
+            if (state.currentRound !== clientState.lastReceivedRound) {
+                this.clientFireworks.clear();
+                clientState.lastReceivedRound = state.currentRound;
+            }
             this.updateFromServer(state);
         });
 
         socket.on('newRound', (state) => {
             this.clientFireworks.clear();
+            clientState.lastReceivedRound = state.currentRound;
             document.getElementById('game-overlay').classList.remove('active');
             this.updateFromServer(state);
         });
@@ -357,6 +364,12 @@ class GameRenderer {
 
         socket.on('winners', (winners) => {
             this.updateWinnersTable(winners);
+        });
+
+        // Handle reconnection - clear and resync
+        socket.on('connect', () => {
+            console.log('🔌 Connected to server');
+            this.clientFireworks.clear();
         });
     }
 
@@ -378,6 +391,16 @@ class GameRenderer {
         // Update fireworks
         const canvasWidth = this.gameCanvas.width;
         const canvasHeight = this.gameCanvas.height;
+
+        // Get IDs from server state
+        const serverIds = new Set(state.fireworks.map(fw => fw.id));
+
+        // Remove any fireworks not in server state (cleanup stale ones)
+        for (const id of this.clientFireworks.keys()) {
+            if (!serverIds.has(id)) {
+                this.clientFireworks.delete(id);
+            }
+        }
 
         state.fireworks.forEach(fwData => {
             if (this.clientFireworks.has(fwData.id)) {
