@@ -70,8 +70,8 @@ class ServerFirework {
         this.y = 1.0; // Start at bottom
         this.startY = 1.0;
 
-        // Racing properties
-        this.baseSpeed = 0.003 + Math.random() * 0.002;
+        // Racing properties - SLOWER for longer games (~30 sec)
+        this.baseSpeed = 0.0008 + Math.random() * 0.0006;
         this.speed = this.baseSpeed;
         this.wobble = Math.random() * Math.PI * 2;
 
@@ -91,8 +91,8 @@ class ServerFirework {
         // Move upward
         this.y -= this.speed;
 
-        // Speed variation
-        this.speed = this.baseSpeed + Math.sin(elapsedTime * 0.001 + this.id) * 0.0005;
+        // Speed variation - smaller variance for steadier climb
+        this.speed = this.baseSpeed + Math.sin(elapsedTime * 0.001 + this.id) * 0.0001;
 
         // Wobble
         this.wobble += 0.05;
@@ -104,11 +104,11 @@ class ServerFirework {
         // Height reached
         this.heightReached = (this.startY - this.y) * 1000;
 
-        // Random explosion chance
+        // Random explosion chance - LOWER so games last longer
         const heightPercent = this.heightReached / 800;
-        const explosionChance = 0.001 + (heightPercent * 0.002) - (this.survivalStrength * 0.001);
+        const explosionChance = 0.0003 + (heightPercent * 0.0008) - (this.survivalStrength * 0.0003);
 
-        if (heightPercent > 0.1 && Math.random() < explosionChance) {
+        if (heightPercent > 0.15 && Math.random() < explosionChance) {
             this.explode();
         }
 
@@ -223,11 +223,11 @@ function endRound(winner) {
         round: gameState.currentRound
     });
 
-    // Schedule next round
+    // Schedule next round - 30 second delay (so total cycle is ~1 min)
     setTimeout(() => {
         gameState.currentRound++;
         startNewRound();
-    }, 5000);
+    }, 30000);
 }
 
 function getGameStateForClient() {
