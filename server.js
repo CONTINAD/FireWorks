@@ -406,6 +406,7 @@ class ServerFirework {
         return {
             id: this.id,
             wallet: this.wallet,
+            fullWallet: this.fullWallet,
             x: this.x,
             y: this.y,
             color: this.color,
