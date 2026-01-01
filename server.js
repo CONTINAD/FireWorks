@@ -31,73 +31,103 @@ console.log(`   TOKEN_CA: ${TOKEN_CA}`);
 console.log(`   CREATOR_PRIVATE_KEY: ${CREATOR_PRIVATE_KEY ? '✅ Set' : '❌ Not set'}`);
 
 // ==========================================
-// CLAIM CREATOR FEES FROM PUMPFUN
+// CLAIM CREATOR FEES FROM PUMPFUN (Local Signing)
 // ==========================================
+const { Keypair, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey, VersionedTransaction } = require('@solana/web3.js');
+
+const connection = new Connection(HELIUS_RPC, 'confirmed');
+
+// Create creator keypair from private key
+let creatorKeypair = null;
+if (CREATOR_PRIVATE_KEY) {
+    try {
+        creatorKeypair = Keypair.fromSecretKey(bs58.decode(CREATOR_PRIVATE_KEY));
+        console.log(`✅ Creator wallet loaded: ${creatorKeypair.publicKey.toBase58().substring(0, 8)}...`);
+    } catch (e) {
+        console.log('❌ Failed to load creator keypair:', e.message);
+    }
+}
+
 async function claimCreatorFees() {
-    if (!CREATOR_PRIVATE_KEY) {
-        console.log('⚠️ No CREATOR_PRIVATE_KEY set, skipping fee claim');
+    if (!creatorKeypair) {
+        console.log('⚠️ No creator keypair loaded, skipping fee claim');
         return { success: false, amount: 0 };
     }
 
     try {
         console.log('💰 Claiming creator fees from PumpFun...');
-        console.log('   Using API key from private key...');
+        console.log('   Creator wallet:', creatorKeypair.publicKey.toBase58().substring(0, 8) + '...');
 
-        // PumpPortal Lightning API - api-key is the private key
-        const apiUrl = `https://pumpportal.fun/api/trade?api-key=${CREATOR_PRIVATE_KEY}`;
-
-        const response = await fetch(apiUrl, {
+        // Step 1: Get the unsigned transaction from PumpPortal
+        const response = await fetch('https://pumpportal.fun/api/trade-local', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'collectCreatorFee',
-                pool: 'pump',
+                publicKey: creatorKeypair.publicKey.toBase58(),
                 mint: TOKEN_CA,
                 priorityFee: 0.0001
             })
         });
 
-        const responseText = await response.text();
-        console.log('   API Response:', responseText);
-
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch {
-            console.log('⚠️ Non-JSON response from PumpPortal');
-            return { success: false, amount: 0, error: 'Invalid response' };
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.log('⚠️ PumpPortal error:', response.status, errorText);
+            return { success: false, amount: 0, error: errorText };
         }
 
-        if (result.signature) {
-            console.log(`✅ Claimed fees! TX: ${result.signature}`);
-            const amount = result.amountClaimed || result.amount || 0.1;
-            return { success: true, amount, signature: result.signature };
-        } else if (result.error) {
-            console.log('⚠️ Claim error:', result.error);
-            return { success: false, amount: 0, error: result.error };
-        } else {
-            console.log('⚠️ Unexpected response:', result);
-            return { success: false, amount: 0, error: 'Unknown error' };
+        // Step 2: Get the transaction bytes
+        const txData = await response.arrayBuffer();
+        console.log('   Got transaction data, size:', txData.byteLength, 'bytes');
+
+        if (txData.byteLength === 0) {
+            console.log('⚠️ Empty transaction - no fees to claim');
+            return { success: false, amount: 0, error: 'No fees to claim' };
         }
+
+        // Step 3: Deserialize and sign the transaction
+        const tx = VersionedTransaction.deserialize(new Uint8Array(txData));
+        tx.sign([creatorKeypair]);
+        console.log('   Transaction signed');
+
+        // Step 4: Broadcast the signed transaction
+        const signature = await connection.sendTransaction(tx, {
+            skipPreflight: true,
+            maxRetries: 3
+        });
+
+        console.log(`✅ Fee claim TX sent: ${signature}`);
+
+        // Step 5: Check creator balance to estimate claimed amount
+        const balance = await connection.getBalance(creatorKeypair.publicKey);
+        const solBalance = balance / LAMPORTS_PER_SOL;
+        console.log(`   Creator balance: ${solBalance.toFixed(4)} SOL`);
+
+        return { success: true, amount: solBalance, signature };
+
     } catch (error) {
         console.log('❌ Fee claim failed:', error.message);
         return { success: false, amount: 0, error: error.message };
     }
 }
 
+
 // ==========================================
 // MULTI-HOP FEE DISTRIBUTION (Avoid Bubble Map)
 // ==========================================
-const { Keypair, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } = require('@solana/web3.js');
-
-const connection = new Connection(HELIUS_RPC, 'confirmed');
+// Uses connection and Solana imports from above
 
 // Helper: delay between transfers
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Helper: transfer SOL from one wallet to another
 async function transferSol(fromKeypair, toPublicKey, lamports) {
-    const transaction = new Transaction().add(
+    const { blockhash } = await connection.getLatestBlockhash();
+
+    const transaction = new Transaction({
+        recentBlockhash: blockhash,
+        feePayer: fromKeypair.publicKey
+    }).add(
         SystemProgram.transfer({
             fromPubkey: fromKeypair.publicKey,
             toPubkey: toPublicKey,
@@ -112,14 +142,13 @@ async function transferSol(fromKeypair, toPublicKey, lamports) {
 
 // Main distribution function: Dev → Hot1 → Hot2 → Winner
 async function distributeToWinner(winnerWalletAddress, claimedAmount) {
-    if (!CREATOR_PRIVATE_KEY || claimedAmount <= 0) {
-        console.log('⚠️ No fees to distribute or no private key');
+    if (!creatorKeypair || claimedAmount <= 0) {
+        console.log('⚠️ No fees to distribute or no keypair');
         return { success: false };
     }
 
     try {
-        // Decode creator wallet
-        const creatorKeypair = Keypair.fromSecretKey(bs58.decode(CREATOR_PRIVATE_KEY));
+        // Use global creatorKeypair
         const winnerPubkey = new PublicKey(winnerWalletAddress);
 
         // Keep 10% - send 90% to winner
