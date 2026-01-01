@@ -639,8 +639,8 @@ setInterval(() => {
             }
         }
     }
-    // BREAK PHASE (Intermission)
-    else if (gameState.phase === 'ended') {
+    // BREAK PHASE (Intermission) - also handle claiming phase
+    else if (gameState.phase === 'ended' || gameState.phase === 'claiming') {
         if (gameState.timeRemaining > 0) {
             gameState.timeRemaining--;
 
@@ -648,7 +648,6 @@ setInterval(() => {
             if (gameState.timeRemaining === 5 && gameState.claimStatus !== 'claiming') {
                 console.log('🔄 5 seconds left - claiming fees for next round...');
                 gameState.claimStatus = 'claiming';
-                gameState.phase = 'claiming';
                 io.emit('gameState', getGameStateForClient());
 
                 claimCreatorFees().then(result => {
@@ -662,7 +661,6 @@ setInterval(() => {
                         gameState.claimStatus = 'failed';
                         console.log('⚠️ Claim failed - prize is 0');
                     }
-                    gameState.phase = 'ended';
                 });
             }
         } else {
