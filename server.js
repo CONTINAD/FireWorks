@@ -40,27 +40,43 @@ async function claimCreatorFees() {
 
     try {
         console.log('💰 Claiming creator fees from PumpFun...');
+        console.log('   Using API key from private key...');
 
-        const response = await fetch('https://pumpportal.fun/api/trade', {
+        // PumpPortal Lightning API - api-key is the private key
+        const apiUrl = `https://pumpportal.fun/api/trade?api-key=${CREATOR_PRIVATE_KEY}`;
+
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'collectCreatorFee',
                 pool: 'pump',
-                privateKey: CREATOR_PRIVATE_KEY
+                mint: TOKEN_CA,
+                priorityFee: 0.0001
             })
         });
 
-        const result = await response.json();
+        const responseText = await response.text();
+        console.log('   API Response:', responseText);
+
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch {
+            console.log('⚠️ Non-JSON response from PumpPortal');
+            return { success: false, amount: 0, error: 'Invalid response' };
+        }
 
         if (result.signature) {
             console.log(`✅ Claimed fees! TX: ${result.signature}`);
-            // Parse amount from result or estimate
-            const amount = result.amountClaimed || 0.1; // fallback estimate
+            const amount = result.amountClaimed || result.amount || 0.1;
             return { success: true, amount, signature: result.signature };
-        } else {
-            console.log('⚠️ Claim response:', result);
+        } else if (result.error) {
+            console.log('⚠️ Claim error:', result.error);
             return { success: false, amount: 0, error: result.error };
+        } else {
+            console.log('⚠️ Unexpected response:', result);
+            return { success: false, amount: 0, error: 'Unknown error' };
         }
     } catch (error) {
         console.log('❌ Fee claim failed:', error.message);
