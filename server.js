@@ -41,12 +41,12 @@ async function claimCreatorFees() {
     try {
         console.log('💰 Claiming creator fees from PumpFun...');
 
-        const response = await fetch(PUMPPORTAL_API, {
+        const response = await fetch('https://pumpportal.fun/api/trade', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'collectCreatorFee',
-                poolType: 'pump',
+                pool: 'pump',
                 privateKey: CREATOR_PRIVATE_KEY
             })
         });
