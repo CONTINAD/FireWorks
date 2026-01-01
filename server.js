@@ -366,7 +366,7 @@ function startNewRound() {
         gameState.fireworks.push(new ServerFirework(i, holder.wallet, holder.fullWallet, i, count));
     }
 
-    gameState.prizePool = (0.5 + Math.random() * 1.5).toFixed(2);
+    // Prize pool is set by claimCreatorFees() after each round - don't override with fake value
 
     console.log(`🎆 Round #${gameState.currentRound} started with ${count} fireworks`);
 
