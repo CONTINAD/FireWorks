@@ -390,13 +390,13 @@ class GameRenderer {
         if (state.phase === 'celebrating') {
             document.getElementById('game-timer').textContent = "WINNER!";
             document.getElementById('hero-countdown').textContent = "WINNER!";
-        } else if (state.phase === 'ended') {
+        } else if (state.phase === 'ended' || state.phase === 'claiming') {
             // Between rounds - show countdown to next round
             const minutes = Math.floor(state.timeRemaining / 60);
             const seconds = state.timeRemaining % 60;
             const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            document.getElementById('game-timer').textContent = `Next: ${timeStr}`;
-            document.getElementById('hero-countdown').textContent = `Next: ${timeStr}`;
+            document.getElementById('game-timer').textContent = timeStr;
+            document.getElementById('hero-countdown').textContent = timeStr;
         } else {
             const minutes = Math.floor(state.timeRemaining / 60);
             const seconds = state.timeRemaining % 60;

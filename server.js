@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 const bs58 = require('bs58');
 
 const app = express();
@@ -229,18 +230,53 @@ async function fetchTokenHolders() {
 }
 
 // ==========================================
+// PERSISTENT STATS (survives deploys)
+// ==========================================
+const STATS_FILE = path.join(__dirname, 'stats.json');
+
+function loadStats() {
+    try {
+        if (fs.existsSync(STATS_FILE)) {
+            const data = fs.readFileSync(STATS_FILE, 'utf8');
+            const stats = JSON.parse(data);
+            console.log(`📊 Loaded stats: Round ${stats.currentRound}, ${stats.totalDistributed} SOL distributed`);
+            return stats;
+        }
+    } catch (error) {
+        console.log('⚠️ Could not load stats:', error.message);
+    }
+    return null;
+}
+
+function saveStats() {
+    try {
+        const stats = {
+            currentRound: gameState.currentRound,
+            totalDistributed: gameState.totalDistributed,
+            winners: gameState.winners.slice(0, 50) // Keep last 50 winners
+        };
+        fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2));
+        console.log(`💾 Saved stats: Round ${stats.currentRound}`);
+    } catch (error) {
+        console.log('⚠️ Could not save stats:', error.message);
+    }
+}
+
+// ==========================================
 // GAME STATE
 // ==========================================
+const savedStats = loadStats();
+
 let gameState = {
-    currentRound: 1,
+    currentRound: savedStats?.currentRound || 1,
     timeRemaining: CONFIG.ROUND_DURATION,
-    prizePool: 0.8,
-    totalDistributed: 0,
+    prizePool: 0,
+    totalDistributed: savedStats?.totalDistributed || 0,
     fireworks: [],
     winner: null,
     phase: 'racing',
     roundStartTime: Date.now(),
-    winners: [],
+    winners: savedStats?.winners || [],
     cameraY: 0,
     lastClaimedAmount: 0,
     claimStatus: 'idle' // idle, claiming, claimed, failed
@@ -509,7 +545,10 @@ function endRound(winner) {
         });
     }
 
-    // Fee claiming now happens at START of next round, not here
+    // Fee claiming now happens 5 seconds before next round
+
+    // Save stats to persist across deploys
+    saveStats();
 
     // Broadcast immediately so client sees "ended" state logic
     io.emit('roundEnded', {
