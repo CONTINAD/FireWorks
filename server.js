@@ -58,7 +58,11 @@ async function claimCreatorFees() {
         console.log('💰 Claiming creator fees from PumpFun...');
         console.log('   Creator wallet:', creatorKeypair.publicKey.toBase58().substring(0, 8) + '...');
 
-        // Step 1: Get the unsigned transaction from PumpPortal
+        // Step 1: Check balance BEFORE claim
+        const balanceBefore = await connection.getBalance(creatorKeypair.publicKey);
+        console.log(`   Balance before: ${(balanceBefore / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+
+        // Step 2: Get the unsigned transaction from PumpPortal
         const response = await fetch('https://pumpportal.fun/api/trade-local', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -76,7 +80,7 @@ async function claimCreatorFees() {
             return { success: false, amount: 0, error: errorText };
         }
 
-        // Step 2: Get the transaction bytes
+        // Step 3: Get the transaction bytes
         const txData = await response.arrayBuffer();
         console.log('   Got transaction data, size:', txData.byteLength, 'bytes');
 
@@ -85,12 +89,12 @@ async function claimCreatorFees() {
             return { success: false, amount: 0, error: 'No fees to claim' };
         }
 
-        // Step 3: Deserialize and sign the transaction
+        // Step 4: Deserialize and sign the transaction
         const tx = VersionedTransaction.deserialize(new Uint8Array(txData));
         tx.sign([creatorKeypair]);
         console.log('   Transaction signed');
 
-        // Step 4: Broadcast the signed transaction
+        // Step 5: Broadcast the signed transaction
         const signature = await connection.sendTransaction(tx, {
             skipPreflight: true,
             maxRetries: 3
@@ -98,12 +102,22 @@ async function claimCreatorFees() {
 
         console.log(`✅ Fee claim TX sent: ${signature}`);
 
-        // Step 5: Check creator balance to estimate claimed amount
-        const balance = await connection.getBalance(creatorKeypair.publicKey);
-        const solBalance = balance / LAMPORTS_PER_SOL;
-        console.log(`   Creator balance: ${solBalance.toFixed(4)} SOL`);
+        // Step 6: Wait a moment for tx to process, then check balance AFTER
+        await new Promise(r => setTimeout(r, 2000));
+        const balanceAfter = await connection.getBalance(creatorKeypair.publicKey);
+        console.log(`   Balance after: ${(balanceAfter / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
 
-        return { success: true, amount: solBalance, signature };
+        // Step 7: Calculate the ACTUAL claimed amount (difference minus tx fee)
+        const claimedLamports = balanceAfter - balanceBefore;
+        const claimedSol = claimedLamports / LAMPORTS_PER_SOL;
+
+        if (claimedSol > 0) {
+            console.log(`   💵 Claimed: ${claimedSol.toFixed(4)} SOL`);
+            return { success: true, amount: claimedSol, signature };
+        } else {
+            console.log('⚠️ No fees were claimed (balance unchanged or decreased)');
+            return { success: false, amount: 0, error: 'No fees claimed' };
+        }
 
     } catch (error) {
         console.log('❌ Fee claim failed:', error.message);
