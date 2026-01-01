@@ -381,9 +381,22 @@ class GameRenderer {
 
         // Update UI
         document.getElementById('current-round').textContent = `#${state.currentRound}`;
+
+        // Update real stats
+        document.getElementById('total-rounds').textContent = state.currentRound;
+        document.getElementById('total-holders').textContent = state.totalHolders || 0;
+
+        // Handle different game phases
         if (state.phase === 'celebrating') {
             document.getElementById('game-timer').textContent = "WINNER!";
             document.getElementById('hero-countdown').textContent = "WINNER!";
+        } else if (state.phase === 'ended') {
+            // Between rounds - show countdown to next round
+            const minutes = Math.floor(state.timeRemaining / 60);
+            const seconds = state.timeRemaining % 60;
+            const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('game-timer').textContent = `Next: ${timeStr}`;
+            document.getElementById('hero-countdown').textContent = `Next: ${timeStr}`;
         } else {
             const minutes = Math.floor(state.timeRemaining / 60);
             const seconds = state.timeRemaining % 60;
@@ -394,7 +407,6 @@ class GameRenderer {
         document.getElementById('timer-progress').style.width = `${(state.timeRemaining / 120) * 100}%`;
         document.getElementById('prize-pool').textContent = `${state.prizePool} SOL`;
         document.getElementById('total-distributed').textContent = state.totalDistributed;
-        // total-given element removed from HTML
 
         const activeCount = state.fireworks.filter(fw => !fw.hasExploded).length;
         const totalCount = state.fireworks.length;
