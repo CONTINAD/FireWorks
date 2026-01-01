@@ -169,15 +169,6 @@ const CONFIG = {
     ]
 };
 
-// Mock wallet addresses (used when Helius not available)
-const MOCK_WALLETS = [
-    '7xKp4mNw', '3fRt8jKl', '9mNp2xWq', '5kLm7yZa',
-    '2pQr9sBt', '8tUv3nCd', '4wXy6mEf', '1aZb5hGi',
-    'Fm3nJ7kP', 'Lx9oW2yA', 'Hp6qZ8dB', 'Nv4rS3fC',
-    'Qy1tU5gD', 'Sw8uV6hE', 'Ux5vW7iF', 'Wz2wX8jG',
-    'Bk7mR4pL', 'Cn9sT6qN'
-];
-
 // Real holder wallets (populated from Helius)
 let realHolders = [];
 
@@ -212,10 +203,12 @@ async function fetchTokenHolders() {
             }));
             console.log(`✅ Found ${realHolders.length} token holders`);
         } else {
-            console.log('⚠️ No holders found, using mock wallets');
+            console.log('❌ No holders found from Helius');
+            realHolders = [];
         }
     } catch (error) {
-        console.log('⚠️ Helius fetch failed, using mock wallets:', error.message);
+        console.log('❌ Helius fetch failed:', error.message);
+        realHolders = [];
     }
 }
 
@@ -339,15 +332,26 @@ function startNewRound() {
     gameState.fireworks = [];
     gameState.cameraY = 0;
 
-    // Use real holders if available, otherwise mock
-    const holders = realHolders.length > 0
-        ? realHolders
-        : MOCK_WALLETS.map(w => ({ wallet: w, fullWallet: w }));
+    // REAL HOLDERS ONLY - no fakes
+    if (realHolders.length === 0) {
+        console.log('⚠️ No holders found - waiting for Helius data');
+        return;
+    }
+
+    // Filter out LP wallets (Raydium, Meteora, etc.)
+    const LP_WALLETS = [
+        '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1', // Raydium AMM
+        'BVChZ3XFEwTMUk1o9i3HAf91H6mFxSwa5X2wFAWhYPhU', // Meteora
+        // Add more LP wallets as needed
+    ];
+
+    const eligibleHolders = realHolders.filter(h => !LP_WALLETS.includes(h.fullWallet));
+
+    console.log(`📊 ${realHolders.length} total holders, ${eligibleHolders.length} eligible (excluding LPs)`);
 
     // SCALABILITY: Cap at 50 fireworks per round
-    // If more holders, pick random 50 contenders
     const MAX_CONCURRENT = 50;
-    let contenders = [...holders];
+    let contenders = [...eligibleHolders];
 
     if (contenders.length > MAX_CONCURRENT) {
         // Shuffle and pick 50
