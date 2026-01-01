@@ -397,7 +397,8 @@ class GameRenderer {
         // total-given element removed from HTML
 
         const activeCount = state.fireworks.filter(fw => !fw.hasExploded).length;
-        document.getElementById('active-fireworks').textContent = activeCount;
+        const totalCount = state.fireworks.length;
+        document.getElementById('active-fireworks').textContent = `${activeCount}/${totalCount}`;
 
         // Update fireworks with camera offset
         const canvasWidth = this.gameCanvas.width;
