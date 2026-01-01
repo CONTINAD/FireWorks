@@ -340,7 +340,27 @@ class ServerFirework {
 // ==========================================
 // GAME LOGIC
 // ==========================================
-function startNewRound() {
+async function startNewRound() {
+    // CLAIM FEES FIRST - so players know the prize pool
+    gameState.claimStatus = 'claiming';
+    gameState.phase = 'claiming'; // New phase
+    io.emit('gameState', getGameStateForClient()); // Let clients know we're claiming
+
+    console.log('🔄 Claiming fees before new round...');
+    const claimResult = await claimCreatorFees();
+
+    if (claimResult.success) {
+        gameState.prizePool = (claimResult.amount * 0.9).toFixed(4); // Keep 10%
+        gameState.lastClaimedAmount = claimResult.amount;
+        gameState.claimStatus = 'claimed';
+        console.log(`💰 Prize pool for this round: ${gameState.prizePool} SOL`);
+    } else {
+        gameState.prizePool = 0;
+        gameState.claimStatus = 'failed';
+        console.log('⚠️ No fees claimed - prize pool is 0');
+    }
+
+    // NOW START THE ROUND
     gameState.timeRemaining = CONFIG.ROUND_DURATION;
     gameState.winner = null;
     gameState.phase = 'racing';
@@ -385,7 +405,7 @@ function startNewRound() {
             [contenders[i], contenders[j]] = [contenders[j], contenders[i]];
         }
         contenders = contenders.slice(0, MAX_CONCURRENT);
-        console.log(`⚠️ Too many holders (${holders.length}). Selected 50 random contenders.`);
+        console.log(`⚠️ Too many eligible. Selected 50 random contenders.`);
     }
 
     const count = contenders.length;
@@ -395,9 +415,7 @@ function startNewRound() {
         gameState.fireworks.push(new ServerFirework(i, holder.wallet, holder.fullWallet, i, count));
     }
 
-    // Prize pool is set by claimCreatorFees() after each round - don't override with fake value
-
-    console.log(`🎆 Round #${gameState.currentRound} started with ${count} fireworks`);
+    console.log(`🎆 Round #${gameState.currentRound} started with ${count} fireworks, Prize: ${gameState.prizePool} SOL`);
 
     io.emit('newRound', getGameStateForClient());
 }
@@ -496,10 +514,10 @@ function endRound(winner) {
 
     gameState.timeRemaining = 30; // Start 30s break countdown
 
-    // Step 1: Distribute THIS round's prize to winner (via hot wallets)
+    // Distribute THIS round's prize to winner (via hot wallets)
     if (prizeForThisRound > 0 && winner.fullWallet) {
         console.log(`💸 Distributing ${prizeForThisRound} SOL to winner...`);
-        distributeToWinner(winner.fullWallet, prizeForThisRound).then(distResult => {
+        distributeToWinner(winner.fullWallet, parseFloat(prizeForThisRound)).then(distResult => {
             if (distResult.success) {
                 console.log(`✅ Prize distributed to ${winner.wallet}`);
             } else {
@@ -508,25 +526,12 @@ function endRound(winner) {
         });
     }
 
-    // Step 2: Claim fees for NEXT round
-    gameState.claimStatus = 'claiming';
-    claimCreatorFees().then(result => {
-        if (result.success) {
-            gameState.lastClaimedAmount = result.amount;
-            gameState.prizePool = result.amount * 0.9; // Show 90% (we keep 10%)
-            gameState.claimStatus = 'claimed';
-            console.log(`💵 Next round prize pool: ${gameState.prizePool.toFixed(4)} SOL`);
-        } else {
-            gameState.lastClaimedAmount = 0;
-            gameState.prizePool = 0;
-            gameState.claimStatus = 'failed';
-        }
-    });
+    // Fee claiming now happens at START of next round, not here
 
     // Broadcast immediately so client sees "ended" state logic
     io.emit('roundEnded', {
         winner: gameState.winner,
-        prizePool: gameState.prizePool,
+        prizePool: prizeForThisRound,
         round: gameState.currentRound
     });
 }
