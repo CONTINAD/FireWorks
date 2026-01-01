@@ -17,16 +17,17 @@ const io = new Server(server, {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==========================================
-// HELIUS RPC CONFIGURATION
+// CONFIGURATION (Set via Railway Environment Variables)
 // ==========================================
-const HELIUS_RPC = 'https://mainnet.helius-rpc.com/?api-key=ae211108-bdbf-40af-90e2-c5418e3f62d3';
-const TOKEN_CA = 'G5TDFMyGsgJ4rWXxatzxZEcYJmVkTjG3mZTZMnbRpump';
-
-// ==========================================
-// PUMPPORTAL CONFIGURATION
-// ==========================================
+const HELIUS_RPC = process.env.HELIUS_RPC || 'https://mainnet.helius-rpc.com/?api-key=ae211108-bdbf-40af-90e2-c5418e3f62d3';
+const TOKEN_CA = process.env.TOKEN_CA || 'G5TDFMyGsgJ4rWXxatzxZEcYJmVkTjG3mZTZMnbRpump';
 const CREATOR_PRIVATE_KEY = process.env.CREATOR_PRIVATE_KEY || '';
 const PUMPPORTAL_API = 'https://pumpportal.fun/api/trade-local';
+
+console.log('🔧 Config loaded:');
+console.log(`   HELIUS_RPC: ${HELIUS_RPC.substring(0, 50)}...`);
+console.log(`   TOKEN_CA: ${TOKEN_CA}`);
+console.log(`   CREATOR_PRIVATE_KEY: ${CREATOR_PRIVATE_KEY ? '✅ Set' : '❌ Not set'}`);
 
 // ==========================================
 // CLAIM CREATOR FEES FROM PUMPFUN
