@@ -340,27 +340,10 @@ class ServerFirework {
 // ==========================================
 // GAME LOGIC
 // ==========================================
-async function startNewRound() {
-    // CLAIM FEES FIRST - so players know the prize pool
-    gameState.claimStatus = 'claiming';
-    gameState.phase = 'claiming'; // New phase
-    io.emit('gameState', getGameStateForClient()); // Let clients know we're claiming
+function startNewRound() {
+    // Fees already claimed 5 seconds before during break phase
 
-    console.log('🔄 Claiming fees before new round...');
-    const claimResult = await claimCreatorFees();
-
-    if (claimResult.success) {
-        gameState.prizePool = (claimResult.amount * 0.9).toFixed(4); // Keep 10%
-        gameState.lastClaimedAmount = claimResult.amount;
-        gameState.claimStatus = 'claimed';
-        console.log(`💰 Prize pool for this round: ${gameState.prizePool} SOL`);
-    } else {
-        gameState.prizePool = 0;
-        gameState.claimStatus = 'failed';
-        console.log('⚠️ No fees claimed - prize pool is 0');
-    }
-
-    // NOW START THE ROUND
+    // START THE ROUND
     gameState.timeRemaining = CONFIG.ROUND_DURATION;
     gameState.winner = null;
     gameState.phase = 'racing';
@@ -592,8 +575,30 @@ setInterval(() => {
     else if (gameState.phase === 'ended') {
         if (gameState.timeRemaining > 0) {
             gameState.timeRemaining--;
+
+            // Claim fees 5 seconds before next round
+            if (gameState.timeRemaining === 5 && gameState.claimStatus !== 'claiming') {
+                console.log('🔄 5 seconds left - claiming fees for next round...');
+                gameState.claimStatus = 'claiming';
+                gameState.phase = 'claiming';
+                io.emit('gameState', getGameStateForClient());
+
+                claimCreatorFees().then(result => {
+                    if (result.success) {
+                        gameState.prizePool = (result.amount * 0.9).toFixed(4);
+                        gameState.lastClaimedAmount = result.amount;
+                        gameState.claimStatus = 'claimed';
+                        console.log(`💰 Claimed! Next round prize: ${gameState.prizePool} SOL`);
+                    } else {
+                        gameState.prizePool = 0;
+                        gameState.claimStatus = 'failed';
+                        console.log('⚠️ Claim failed - prize is 0');
+                    }
+                    gameState.phase = 'ended';
+                });
+            }
         } else {
-            // Break is over
+            // Break is over - start new round
             gameState.currentRound++;
             startNewRound();
         }
