@@ -1,0 +1,22 @@
+{
+  "currentRound": 1,
+  "totalDistributed": 0,
+  "winners": [
+    {
+      "wallet": "HHS1umRT",
+      "fullWallet": "HHS1umRTpFLvfKmjn9rkZbMydmp6Jst9YvvGtRhYs9x5",
+      "round": 1,
+      "prize": 0,
+      "height": 2340,
+      "timestamp": 1767230489675
+    },
+    {
+      "wallet": "75KDCw7G",
+      "fullWallet": "75KDCw7GGMQgjFRfWb4ndSSZTZA2jxkksFNgEqibyBvJ",
+      "round": 1,
+      "prize": 0,
+      "height": 2338,
+      "timestamp": 1767230212267
+    }
+  ]
+}
