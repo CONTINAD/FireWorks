@@ -575,13 +575,21 @@ function endRound(winner) {
     console.log(`🏆 Round #${gameState.currentRound} winner: ${winner.wallet} (${Math.floor(winner.heightReached)}m)`);
 
     gameState.timeRemaining = 30; // Start 30s break countdown
+    gameState.phase = 'ended'; // Start break phase
 
     // Distribute THIS round's prize to winner (via hot wallets)
     if (prizeForThisRound > 0 && winner.fullWallet) {
         console.log(`💸 Distributing ${prizeForThisRound} SOL to winner...`);
         distributeToWinner(winner.fullWallet, parseFloat(prizeForThisRound)).then(distResult => {
             if (distResult.success) {
-                console.log(`✅ Prize distributed to ${winner.wallet}`);
+                console.log(`✅ Prize distributed to ${winner.wallet} - TX: ${distResult.signature}`);
+
+                // Update winner with TX signature
+                const winnerRecord = gameState.winners.find(w => w.round === gameState.currentRound);
+                if (winnerRecord) {
+                    winnerRecord.tx = distResult.signature;
+                    saveStats(); // Save again with TX
+                }
             } else {
                 console.log(`⚠️ Distribution failed: ${distResult.error}`);
             }
@@ -715,6 +723,9 @@ server.listen(PORT, async () => {
 
     // Fetch real holders first
     await fetchTokenHolders();
+
+    // Update holders every 1 minute
+    setInterval(fetchTokenHolders, 60 * 1000);
 
     // Start first round
     startNewRound();

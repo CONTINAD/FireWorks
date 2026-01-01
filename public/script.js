@@ -391,12 +391,19 @@ class GameRenderer {
             document.getElementById('game-timer').textContent = "WINNER!";
             document.getElementById('hero-countdown').textContent = "WINNER!";
         } else if (state.phase === 'ended' || state.phase === 'claiming') {
-            // Between rounds - show countdown to next round
-            const minutes = Math.floor(state.timeRemaining / 60);
-            const seconds = state.timeRemaining % 60;
-            const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            document.getElementById('game-timer').textContent = timeStr;
-            document.getElementById('hero-countdown').textContent = timeStr;
+            // Break phase (30s total)
+            // Show WINNER for first 20s (30-10 remaining), then countdown
+
+            if (state.timeRemaining > 10) {
+                document.getElementById('game-timer').textContent = "WINNER!";
+                document.getElementById('hero-countdown').textContent = "WINNER!";
+            } else {
+                const minutes = Math.floor(state.timeRemaining / 60);
+                const seconds = state.timeRemaining % 60;
+                const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                document.getElementById('game-timer').textContent = timeStr;
+                document.getElementById('hero-countdown').textContent = timeStr;
+            }
         } else {
             const minutes = Math.floor(state.timeRemaining / 60);
             const seconds = state.timeRemaining % 60;
@@ -470,13 +477,18 @@ class GameRenderer {
             const rankBadge = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
             const timeAgo = this.getTimeAgo(winner.timestamp);
 
+            // Link to payout TX if available, otherwise wallet
+            const solscanUrl = winner.tx
+                ? `https://solscan.io/tx/${winner.tx}`
+                : `https://solscan.io/account/${winner.fullWallet || winner.wallet}`;
+
             row.innerHTML = `
                 <td><span class="rank-badge">${rankBadge}</span></td>
-                <td class="wallet-cell"><span class="wallet-address">${winner.wallet}...</span></td>
+                <td class="wallet-cell"><span class="wallet-address">${winner.fullWallet || winner.wallet}</span></td>
                 <td>#${winner.round}</td>
                 <td class="prize-cell">${winner.prize} SOL</td>
                 <td>${timeAgo}</td>
-                <td><a href="https://solscan.io/tx/example${winner.round}" target="_blank" class="verify-link">Solscan ↗</a></td>
+                <td><a href="${solscanUrl}" target="_blank" class="verify-link">Solscan ↗</a></td>
             `;
             tbody.appendChild(row);
         });
