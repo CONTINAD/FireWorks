@@ -345,9 +345,18 @@ function startNewRound() {
         // Add more LP wallets as needed
     ];
 
-    const eligibleHolders = realHolders.filter(h => !LP_WALLETS.includes(h.fullWallet));
+    // Minimum 300K tokens to be eligible (300,000 tokens)
+    const MIN_TOKENS = 300000;
 
-    console.log(`📊 ${realHolders.length} total holders, ${eligibleHolders.length} eligible (excluding LPs)`);
+    const eligibleHolders = realHolders.filter(h => {
+        // Exclude LP wallets
+        if (LP_WALLETS.includes(h.fullWallet)) return false;
+        // Must have at least 300k tokens
+        const balance = parseInt(h.balance) || 0;
+        return balance >= MIN_TOKENS;
+    });
+
+    console.log(`📊 ${realHolders.length} total holders, ${eligibleHolders.length} eligible (300K+ tokens, excluding LPs)`);
 
     // SCALABILITY: Cap at 50 fireworks per round
     const MAX_CONCURRENT = 50;
