@@ -394,7 +394,7 @@ class GameRenderer {
         document.getElementById('timer-progress').style.width = `${(state.timeRemaining / 120) * 100}%`;
         document.getElementById('prize-pool').textContent = `${state.prizePool} SOL`;
         document.getElementById('total-distributed').textContent = state.totalDistributed;
-        document.getElementById('total-given').textContent = `${state.totalDistributed} SOL`;
+        // total-given element removed from HTML
 
         const activeCount = state.fireworks.filter(fw => !fw.hasExploded).length;
         document.getElementById('active-fireworks').textContent = activeCount;
